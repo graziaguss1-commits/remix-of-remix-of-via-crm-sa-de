@@ -7,7 +7,10 @@ import { faixaDaGrade, type HorarioAtendimento } from "@/lib/orgSettings";
 import {
   APPOINTMENT_STATUS_BADGE,
   APPOINTMENT_STATUS_LABELS,
+  APPOINTMENT_TYPE_COLORS,
+  APPOINTMENT_TYPE_SEM_TIPO,
   AppointmentStatus,
+  AppointmentType,
   fullName,
 } from "@/components/health/types";
 
@@ -19,6 +22,7 @@ export interface GridAppointment {
   body: string | null;
   due_date: string | null;
   appointment_status: AppointmentStatus;
+  appointment_type?: AppointmentType | null;
   duration_minutes: number | null;
   patient?: { id: string; first_name: string; last_name: string | null; phone: string } | null;
   professional?: { id: string; name: string } | null;
@@ -182,13 +186,17 @@ export function AgendaGrid({
                 const mins = c.duration_minutes ?? 30;
                 const nome = c.patient ? fullName(c.patient) : c.title;
                 const cancelada = c.appointment_status === "cancelled";
+                const cor = c.appointment_type
+                  ? APPOINTMENT_TYPE_COLORS[c.appointment_type]
+                  : APPOINTMENT_TYPE_SEM_TIPO;
                 return (
                   <button
                     key={c.id}
                     onClick={() => onSelecionarConsulta(c.id)}
                     className={cn(
-                      "absolute left-1 right-1 z-10 overflow-hidden rounded-md border bg-card px-2 py-1 text-left shadow-sm transition-shadow hover:shadow-md",
-                      cancelada && "opacity-60",
+                      "absolute left-1 right-1 z-10 overflow-hidden rounded-md border border-l-4 px-2 py-1 text-left shadow-sm transition-shadow hover:shadow-md",
+                      cor.faixa,
+                      cancelada ? "bg-card opacity-60" : cor.fundo,
                     )}
                     style={{ top: topo(ini, faixa.inicio), height: altura(mins) }}
                   >

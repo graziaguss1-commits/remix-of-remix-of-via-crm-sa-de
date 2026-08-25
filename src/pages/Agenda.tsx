@@ -25,12 +25,11 @@ import { PatientDrawer } from "@/components/health/PatientDrawer";
 import { AgendaGrid, GridAppointment, GridBloqueio } from "@/components/health/AgendaGrid";
 import { HORARIO_PADRAO, getHorarioAtendimento, type HorarioAtendimento } from "@/lib/orgSettings";
 import {
-  APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS,
+  APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_COLORS, APPOINTMENT_TYPE_LABELS,
   AppointmentStatus, AppointmentType, fullName,
 } from "@/components/health/types";
 
 interface AppointmentRow extends GridAppointment {
-  appointment_type: AppointmentType | null;
   professional_id: string | null;
   contact_id: string | null;
 }
@@ -301,6 +300,15 @@ export default function Agenda() {
         </div>
       </Card>
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        {(Object.keys(APPOINTMENT_TYPE_LABELS) as AppointmentType[]).map((t) => (
+          <span key={t} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={`h-2.5 w-2.5 rounded-full ${APPOINTMENT_TYPE_COLORS[t].ponto}`} />
+            {APPOINTMENT_TYPE_LABELS[t]}
+          </span>
+        ))}
+      </div>
+
       {loading ? (
         <div className="py-10 text-center text-sm text-muted-foreground">Carregando…</div>
       ) : (
@@ -346,6 +354,15 @@ export default function Agenda() {
                     {detalhe.duration_minutes ? ` · ${detalhe.duration_minutes} min` : ""}
                   </p>
                 </div>
+                {detalhe.appointment_type && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Tipo</p>
+                    <p className="flex items-center gap-1.5">
+                      <span className={`h-2.5 w-2.5 rounded-full ${APPOINTMENT_TYPE_COLORS[detalhe.appointment_type].ponto}`} />
+                      {APPOINTMENT_TYPE_LABELS[detalhe.appointment_type]}
+                    </p>
+                  </div>
+                )}
                 {detalhe.professional?.name && (
                   <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Médico</p>

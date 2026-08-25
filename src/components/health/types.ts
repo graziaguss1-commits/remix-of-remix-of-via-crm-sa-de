@@ -64,11 +64,27 @@ export const APPOINTMENT_STATUS_BADGE: Record<AppointmentStatus, string> = {
 };
 
 export const APPOINTMENT_TYPE_LABELS: Record<AppointmentType, string> = {
-  consulta: "Consulta",
-  retorno: "Retorno",
+  consulta: "Primeira consulta",
+  retorno: "Consulta recorrente",
   procedimento: "Procedimento",
   avaliacao: "Avaliação",
   urgencia: "Urgência",
+};
+
+/** Cor de cada tipo de consulta na grade da agenda: faixa lateral e fundo. */
+export const APPOINTMENT_TYPE_COLORS: Record<AppointmentType, { faixa: string; fundo: string; ponto: string }> = {
+  consulta:     { faixa: "border-l-emerald-500", fundo: "bg-emerald-500/10", ponto: "bg-emerald-500" },
+  retorno:      { faixa: "border-l-violet-500",  fundo: "bg-violet-500/10",  ponto: "bg-violet-500" },
+  procedimento: { faixa: "border-l-amber-500",   fundo: "bg-amber-500/10",   ponto: "bg-amber-500" },
+  avaliacao:    { faixa: "border-l-sky-600",     fundo: "bg-sky-600/10",     ponto: "bg-sky-600" },
+  urgencia:     { faixa: "border-l-rose-500",    fundo: "bg-rose-500/10",    ponto: "bg-rose-500" },
+};
+
+/** Usado quando a consulta nao tem tipo definido. */
+export const APPOINTMENT_TYPE_SEM_TIPO = {
+  faixa: "border-l-muted-foreground/40",
+  fundo: "bg-muted/40",
+  ponto: "bg-muted-foreground/50",
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
