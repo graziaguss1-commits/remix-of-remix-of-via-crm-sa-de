@@ -89,7 +89,7 @@ export default function Agenda() {
         .select(
           "id,title,body,due_date,appointment_status,appointment_type,duration_minutes,professional_id,contact_id," +
           "patient:patients!activities_contact_id_fkey(id,first_name,last_name,phone)," +
-          "professional:profiles!activities_professional_id_fkey(id,name)"
+          "professional:professionals!activities_professional_id_fkey(id,name)"
         )
         .eq("org_id", orgId)
         .not("appointment_status", "is", null)

@@ -61,10 +61,13 @@ export function AppointmentCreateModal({ open, onOpenChange, defaultPatientId, o
 
   const fetchProfessionals = useCallback(async () => {
     if (!orgId) return;
+    // Medicos vem de "professionals" (tela Medicos), nao de "profiles",
+    // que e a lista de usuarios com login no sistema.
     const { data } = await (supabase as any)
-      .from("profiles")
+      .from("professionals")
       .select("id,name")
       .eq("org_id", orgId)
+      .eq("is_active", true)
       .order("name");
     setProfessionals((data ?? []) as ProfOption[]);
   }, [orgId]);
