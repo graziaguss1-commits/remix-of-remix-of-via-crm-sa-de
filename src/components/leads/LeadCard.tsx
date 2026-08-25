@@ -44,6 +44,12 @@ export function LeadCard({
         <TemperaturaBadge value={lead.contact?.temperatura} />
       </div>
 
+      {lead.dor_relatada && (
+        <p className="mt-1.5 line-clamp-2 border-l-2 border-primary/30 pl-2 text-xs italic text-muted-foreground">
+          {lead.dor_relatada}
+        </p>
+      )}
+
       {lead.contact?.phone && (
         <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
           <Phone className="h-3 w-3" /> {lead.contact.phone}

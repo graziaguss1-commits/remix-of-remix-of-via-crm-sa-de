@@ -39,7 +39,7 @@ export function useLeadsBoard() {
         supabase
           .from("deals")
           .select(
-            "id,title,value,stage_id,status,created_at,contact_id," +
+            "id,title,dor_relatada,value,stage_id,status,created_at,contact_id," +
               "contacts(id,first_name,last_name,phone,email,temperatura,canal,anuncio,fonte,status,lead_score,indicado_por_contact_id)",
           )
           .eq("org_id", orgId!)
@@ -85,6 +85,7 @@ export function useLeadsBoard() {
       const leads: Lead[] = deals.map((d) => ({
         id: d.id,
         title: d.title,
+        dor_relatada: d.dor_relatada ?? null,
         value: d.value,
         stage_id: d.stage_id,
         status: d.status,

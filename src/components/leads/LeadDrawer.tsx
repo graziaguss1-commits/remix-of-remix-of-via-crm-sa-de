@@ -54,7 +54,7 @@ export function LeadDrawer({ lead, stages, currency, open, onOpenChange, onChang
   const [form, setForm] = useState({
     first_name: "", last_name: "", phone: "", email: "",
     canal: "", anuncio: "", temperatura: "" as Temperatura | "",
-    indicado_por: "", value: "", stage_id: "",
+    indicado_por: "", value: "", stage_id: "", dor_relatada: "",
   });
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -83,6 +83,7 @@ export function LeadDrawer({ lead, stages, currency, open, onOpenChange, onChang
       indicado_por: c?.indicado_por_contact_id ?? "",
       value: lead.value != null ? String(lead.value) : "",
       stage_id: lead.stage_id ?? "",
+      dor_relatada: lead.dor_relatada ?? "",
     });
     setTagIds(lead.tags.map((t) => t.id));
     setShowFuForm(false);
@@ -142,6 +143,7 @@ export function LeadDrawer({ lead, stages, currency, open, onOpenChange, onChang
         .from("deals")
         .update({
           value: form.value ? Number(form.value) : 0,
+          dor_relatada: form.dor_relatada.trim() || null,
           stage_id: form.stage_id || null,
           title: [form.first_name, form.last_name].filter(Boolean).join(" ") || lead.title,
         })
@@ -330,6 +332,16 @@ export function LeadDrawer({ lead, stages, currency, open, onOpenChange, onChang
                   )}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Dor relatada</Label>
+              <Textarea
+                rows={3}
+                value={form.dor_relatada}
+                onChange={(e) => setForm({ ...form, dor_relatada: e.target.value })}
+                placeholder="O que a pessoa falou, com as palavras dela."
+              />
             </div>
 
             <div className="space-y-1.5">

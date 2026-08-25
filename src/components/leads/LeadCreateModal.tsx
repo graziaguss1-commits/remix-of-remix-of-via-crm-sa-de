@@ -9,6 +9,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -35,6 +36,7 @@ const EMPTY = {
   valor: "",
   indicadoPor: "",
   stageId: "",
+  dorRelatada: "",
 };
 
 const SEM_ANUNCIO = "sem-anuncio";
@@ -97,6 +99,7 @@ export function LeadCreateModal({ open, onOpenChange, stages, pipelineId, onCrea
         pipeline_id: pipelineId,
         stage_id: defaultStage || null,
         title: form.nome.trim(),
+        dor_relatada: form.dorRelatada.trim() || null,
         value: form.valor ? Number(form.valor) : 0,
         currency: "BRL",
         status: "open",
@@ -182,6 +185,19 @@ export function LeadCreateModal({ open, onOpenChange, stages, pipelineId, onCrea
                 Nenhum anúncio cadastrado. Crie a lista em Configurações → Anúncios.
               </p>
             )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Dor relatada</Label>
+            <Textarea
+              rows={3}
+              value={form.dorRelatada}
+              onChange={(e) => set({ dorRelatada: e.target.value })}
+              placeholder="O que a pessoa falou, com as palavras dela. Ex: acorda cansada, ganhou 8kg no último ano, já tentou de tudo"
+            />
+            <p className="text-xs text-muted-foreground">
+              Use na hora do retorno e do fechamento — é o que ela veio resolver.
+            </p>
           </div>
 
           <div className="space-y-1.5">

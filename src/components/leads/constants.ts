@@ -97,6 +97,8 @@ export interface LeadContact {
 export interface Lead {
   id: string;
   title: string;
+  /** O que o lead relatou, nas palavras dele. */
+  dor_relatada: string | null;
   value: number | null;
   stage_id: string | null;
   status: string | null;
