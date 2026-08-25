@@ -18,6 +18,8 @@ import {
   LogOut,
   HelpCircle,
   Stethoscope,
+  TrendingUp,
+  Megaphone,
 } from "lucide-react";
 import { HelpCenter } from "@/components/help/HelpCenter";
 import { NavLink } from "@/components/NavLink";
@@ -54,6 +56,8 @@ const operationalItems = [
 ];
 
 const analyticsItems = [
+  { title: "Dash. comercial", url: "/dashboard-comercial", icon: TrendingUp },
+  { title: "Dash. marketing", url: "/dashboard-marketing", icon: Megaphone },
   { title: "Relatórios", url: "/reports",      icon: BarChart3 },
   { title: "Metas",      url: "/health-goals", icon: Target },
 ];
