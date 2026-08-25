@@ -35,7 +35,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
   const [saving, setSaving] = useState(false);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
   const [otherActivities, setOtherActivities] = useState<any[]>([]);
 
   useEffect(() => {
@@ -44,7 +43,7 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
     setLoading(true);
     (async () => {
       try {
-        const [{ data: p }, apps, pays, other] = await Promise.all([
+        const [{ data: p }, apps, other] = await Promise.all([
           (supabase as any).from("patients").select("*").eq("id", patientId).maybeSingle(),
           (supabase as any)
             .from("activities")
@@ -52,12 +51,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
             .eq("contact_id", patientId)
             .not("appointment_status", "is", null)
             .order("due_date", { ascending: false })
-            .limit(50),
-          (supabase as any)
-            .from("payments")
-            .select("id,procedure_name,amount,payment_method,status,paid_at,created_at")
-            .eq("patient_id", patientId)
-            .order("created_at", { ascending: false })
             .limit(50),
           (supabase as any)
             .from("activities")
@@ -70,7 +63,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
         if (cancelled) return;
         setPatient(p ?? null);
         setAppointments(apps.data ?? []);
-        setPayments(pays.data ?? []);
         setOtherActivities(other.data ?? []);
       } catch (err: any) {
         toast({ title: "Erro ao carregar paciente", description: err?.message ?? String(err), variant: "destructive" });
@@ -119,7 +111,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
     }
   };
 
-  const totalPaid = payments.filter((p) => p.status === "paid").reduce((acc, p) => acc + Number(p.amount || 0), 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -157,10 +148,9 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
           <div className="py-10 text-center text-sm text-muted-foreground">Paciente não encontrado.</div>
         ) : (
           <Tabs defaultValue="dados" className="mt-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="consultas">Consultas</TabsTrigger>
-              <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
               <TabsTrigger value="atividades">Atividades</TabsTrigger>
             </TabsList>
 
@@ -258,34 +248,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
                     <Badge className={APPOINTMENT_STATUS_BADGE[a.appointment_status as AppointmentStatus] ?? ""}>
                       {APPOINTMENT_STATUS_LABELS[a.appointment_status as AppointmentStatus] ?? a.appointment_status}
                     </Badge>
-                  </div>
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="pagamentos" className="space-y-2 pt-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Total pago</span>
-                <span className="font-semibold">{BRL.format(totalPaid)}</span>
-              </div>
-              {payments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum pagamento registrado.</p>
-              ) : (
-                payments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                    <div>
-                      <p className="font-medium">{p.procedure_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.paid_at ? new Date(p.paid_at).toLocaleDateString("pt-BR") : new Date(p.created_at).toLocaleDateString("pt-BR")}
-                        {" · "}{p.payment_method}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{BRL.format(Number(p.amount))}</p>
-                      <Badge className={PAYMENT_STATUS_BADGE[p.status] ?? ""}>
-                        {PAYMENT_STATUS_LABELS[p.status] ?? p.status}
-                      </Badge>
-                    </div>
                   </div>
                 ))
               )}

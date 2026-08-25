@@ -222,7 +222,6 @@ export default function Reports() {
             <TabsTrigger value="agenda" className="text-xs gap-1"><CalendarCheck className="h-3.5 w-3.5" />Agenda</TabsTrigger>
             <TabsTrigger value="professionals" className="text-xs gap-1"><Stethoscope className="h-3.5 w-3.5" />Profissionais</TabsTrigger>
             <TabsTrigger value="patients" className="text-xs gap-1"><Users className="h-3.5 w-3.5" />Pacientes</TabsTrigger>
-            <TabsTrigger value="financial" className="text-xs gap-1"><Wallet className="h-3.5 w-3.5" />Financeiro</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -236,9 +235,6 @@ export default function Reports() {
           </TabsContent>
           <TabsContent value="patients">
             <PatientsReport patients={patients} appts={appointments} payments={payments} range={range} />
-          </TabsContent>
-          <TabsContent value="financial">
-            <FinancialReport payments={filteredPayments} patMap={patMap} />
           </TabsContent>
         </Tabs>
       )}
@@ -685,134 +681,3 @@ function PatientsReport({ patients, appts, payments, range }: {
   );
 }
 
-// ─────────────────────────────────────────────
-// TAB: Financeiro
-// ─────────────────────────────────────────────
-function FinancialReport({ payments, patMap }: {
-  payments: Payment[]; patMap: Map<string, Patient>;
-}) {
-  const paid = payments.filter(p => p.status === "paid");
-  const pending = payments.filter(p => p.status === "pending");
-  const overdue = payments.filter(p => p.status === "overdue");
-
-  const totalPaid = paid.reduce((s, p) => s + p.amount, 0);
-  const totalPending = pending.reduce((s, p) => s + p.amount, 0);
-  const totalOverdue = overdue.reduce((s, p) => s + p.amount, 0);
-
-  const byMethod = useMemo(() => {
-    const map: Record<string, number> = {};
-    paid.forEach(p => { map[p.payment_method] = (map[p.payment_method] || 0) + p.amount; });
-    return Object.entries(map).map(([k, v]) => ({
-      name: PAYMENT_METHOD_LABELS[k] ?? k,
-      value: v,
-    }));
-  }, [paid]);
-
-  const byProcedure = useMemo(() => {
-    const map: Record<string, { count: number; revenue: number }> = {};
-    paid.forEach(p => {
-      const k = p.procedure_name || "—";
-      if (!map[k]) map[k] = { count: 0, revenue: 0 };
-      map[k].count += 1;
-      map[k].revenue += p.amount;
-    });
-    return Object.entries(map).map(([k, v]) => ({ procedimento: k, ...v }))
-      .sort((a, b) => b.revenue - a.revenue).slice(0, 10);
-  }, [paid]);
-
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-        <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="h-3.5 w-3.5 text-success" />
-            <p className="text-[10px] uppercase text-muted-foreground">Recebido</p>
-          </div>
-          <p className="text-xl font-bold">{BRL.format(totalPaid)}</p>
-          <p className="text-[10px] text-muted-foreground">{paid.length} pagamentos</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <Wallet className="h-3.5 w-3.5 text-amber-600" />
-            <p className="text-[10px] uppercase text-muted-foreground">Pendente</p>
-          </div>
-          <p className="text-xl font-bold">{BRL.format(totalPending)}</p>
-          <p className="text-[10px] text-muted-foreground">{pending.length} pagamentos</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-            <p className="text-[10px] uppercase text-muted-foreground">Em atraso</p>
-          </div>
-          <p className="text-xl font-bold">{BRL.format(totalOverdue)}</p>
-          <p className="text-[10px] text-muted-foreground">{overdue.length} pagamentos</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <ActivityIcon className="h-3.5 w-3.5 text-primary" />
-            <p className="text-[10px] uppercase text-muted-foreground">Ticket médio</p>
-          </div>
-          <p className="text-xl font-bold">{BRL.format(paid.length > 0 ? totalPaid / paid.length : 0)}</p>
-        </CardContent></Card>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Receita por forma de pagamento</CardTitle></CardHeader>
-          <CardContent className="h-64">
-            {byMethod.length === 0 ? (
-              <div className="h-full grid place-items-center text-xs text-muted-foreground">Sem dados</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={byMethod} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}
-                    label={(e: any) => BRL.format(e.value)}>
-                    {byMethod.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => BRL.format(Number(v))} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm">Top procedimentos</CardTitle>
-            <Button variant="outline" size="sm" className="h-7 text-[10px]"
-              onClick={() => downloadCSV(byProcedure.map(p => ({
-                Procedimento: p.procedimento, Quantidade: p.count, "Receita (R$)": p.revenue,
-              })), "procedimentos")}>
-              <Download className="mr-1 h-3 w-3" />CSV
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {byProcedure.length === 0 ? (
-              <div className="py-8 text-center text-xs text-muted-foreground">Sem dados</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-[10px]">Procedimento</TableHead>
-                    <TableHead className="text-[10px] text-right">Qtd</TableHead>
-                    <TableHead className="text-[10px] text-right">Receita</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {byProcedure.map((p, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-xs">{p.procedimento}</TableCell>
-                      <TableCell className="text-xs text-right">{p.count}</TableCell>
-                      <TableCell className="text-xs text-right font-mono">{BRL.format(p.revenue)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}

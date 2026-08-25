@@ -17,7 +17,6 @@ const pages = [
   { label: "Pacientes",     icon: Users,           path: "/patients" },
   { label: "Médicos",       icon: Stethoscope,     path: "/professionals" },
   { label: "Agenda",        icon: Calendar,        path: "/agenda" },
-  { label: "Financeiro",    icon: DollarSign,      path: "/financeiro" },
   { label: "Atividades",    icon: Activity,        path: "/activities" },
   { label: "Automações",    icon: Zap,             path: "/automations" },
   { label: "Templates",     icon: FileText,        path: "/templates" },

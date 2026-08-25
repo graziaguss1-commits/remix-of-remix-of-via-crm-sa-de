@@ -34,7 +34,6 @@ const DashboardMarketing = lazy(() => import("./pages/DashboardMarketing"));
 const Patients = lazy(() => import("./pages/Patients"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Records = lazy(() => import("./pages/Records"));
-const Financeiro = lazy(() => import("./pages/Financeiro"));
 const HealthGoals = lazy(() => import("./pages/HealthGoals"));
 
 const queryClient = new QueryClient({
@@ -75,7 +74,6 @@ const App = () => (
                 <Route path="/patients" element={<SuspenseRoute><Patients /></SuspenseRoute>} />
                 <Route path="/agenda" element={<SuspenseRoute><Agenda /></SuspenseRoute>} />
                 <Route path="/records" element={<SuspenseRoute><Records /></SuspenseRoute>} />
-                <Route path="/financeiro" element={<SuspenseRoute><Financeiro /></SuspenseRoute>} />
                 <Route path="/health-goals" element={<SuspenseRoute><HealthGoals /></SuspenseRoute>} />
                 <Route path="/professionals" element={<SuspenseRoute><Professionals /></SuspenseRoute>} />
                 <Route path="/activities" element={<SuspenseRoute><Activities /></SuspenseRoute>} />

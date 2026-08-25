@@ -18,7 +18,6 @@ const routeLabels: Record<string, string> = {
   "/professionals": "Médicos",
   "/agenda": "Agenda",
   "/records": "Prontuários",
-  "/financeiro": "Financeiro",
   "/health-goals": "Metas",
   "/activities": "Atividades",
   "/tasks": "Tarefas",

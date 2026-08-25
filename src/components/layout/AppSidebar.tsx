@@ -5,7 +5,6 @@ import {
   Calendar,
   Zap,
   FileText,
-  DollarSign,
   Activity,
   Kanban,
   CalendarClock,
@@ -49,7 +48,6 @@ const operationalItems = [
   { title: "Automações", url: "/automations", icon: Zap },
   { title: "Pipeline",   url: "/pipeline",    icon: Kanban },
   { title: "Follow-ups", url: "/follow-ups",  icon: CalendarClock },
-  { title: "Financeiro", url: "/financeiro",  icon: DollarSign },
   { title: "Atividades", url: "/activities",  icon: Activity },
 ];
 
