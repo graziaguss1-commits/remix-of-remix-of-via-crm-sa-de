@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
-  ClipboardList,
   Zap,
   FileText,
   DollarSign,
@@ -44,7 +43,6 @@ const generalItems = [
   { title: "Pacientes",   url: "/patients",  icon: Users },
   { title: "Médicos", url: "/professionals", icon: Stethoscope },
   { title: "Agenda",      url: "/agenda",    icon: Calendar },
-  { title: "Prontuários", url: "/records",   icon: ClipboardList },
 ];
 
 const operationalItems = [

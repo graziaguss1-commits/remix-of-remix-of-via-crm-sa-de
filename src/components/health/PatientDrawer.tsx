@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { CalendarPlus, FileText, DollarSign } from "lucide-react";
+import { CalendarPlus, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Patient, BLOOD_TYPES, fullName, BRL, formatPhone,
@@ -35,7 +35,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
   const [saving, setSaving] = useState(false);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [records, setRecords] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [otherActivities, setOtherActivities] = useState<any[]>([]);
 
@@ -45,7 +44,7 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
     setLoading(true);
     (async () => {
       try {
-        const [{ data: p }, apps, recs, pays, other] = await Promise.all([
+        const [{ data: p }, apps, pays, other] = await Promise.all([
           (supabase as any).from("patients").select("*").eq("id", patientId).maybeSingle(),
           (supabase as any)
             .from("activities")
@@ -53,12 +52,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
             .eq("contact_id", patientId)
             .not("appointment_status", "is", null)
             .order("due_date", { ascending: false })
-            .limit(50),
-          (supabase as any)
-            .from("medical_records")
-            .select("id,created_at,is_draft,chief_complaint,follow_up_date")
-            .eq("patient_id", patientId)
-            .order("created_at", { ascending: false })
             .limit(50),
           (supabase as any)
             .from("payments")
@@ -77,7 +70,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
         if (cancelled) return;
         setPatient(p ?? null);
         setAppointments(apps.data ?? []);
-        setRecords(recs.data ?? []);
         setPayments(pays.data ?? []);
         setOtherActivities(other.data ?? []);
       } catch (err: any) {
@@ -165,10 +157,9 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
           <div className="py-10 text-center text-sm text-muted-foreground">Paciente não encontrado.</div>
         ) : (
           <Tabs defaultValue="dados" className="mt-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="consultas">Consultas</TabsTrigger>
-              <TabsTrigger value="prontuarios">Prontuários</TabsTrigger>
               <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
               <TabsTrigger value="atividades">Atividades</TabsTrigger>
             </TabsList>
@@ -268,32 +259,6 @@ export function PatientDrawer({ patientId, open, onOpenChange, onUpdated }: Pati
                       {APPOINTMENT_STATUS_LABELS[a.appointment_status as AppointmentStatus] ?? a.appointment_status}
                     </Badge>
                   </div>
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="prontuarios" className="space-y-2 pt-4">
-              <div className="flex justify-end">
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/records?patient=${patient.id}`}>
-                    <FileText className="mr-2 h-4 w-4" /> Novo prontuário
-                  </Link>
-                </Button>
-              </div>
-              {records.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum prontuário ainda.</p>
-              ) : (
-                records.map((r) => (
-                  <Link key={r.id} to={`/records/${r.id}`} className="block rounded-md border p-3 text-sm hover:bg-accent/40">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium truncate">{r.chief_complaint || "Sem queixa registrada"}</p>
-                      <Badge variant={r.is_draft ? "secondary" : "default"}>{r.is_draft ? "Rascunho" : "Finalizado"}</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(r.created_at).toLocaleString("pt-BR")}
-                      {r.follow_up_date && <> · retorno {new Date(r.follow_up_date).toLocaleDateString("pt-BR")}</>}
-                    </p>
-                  </Link>
                 ))
               )}
             </TabsContent>

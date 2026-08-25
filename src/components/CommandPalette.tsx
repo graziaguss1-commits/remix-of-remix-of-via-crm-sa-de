@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Stethoscope, Calendar, ClipboardList, DollarSign,
+  LayoutDashboard, Users, Stethoscope, Calendar, DollarSign,
   Activity, BarChart3, Settings, FileText, Zap, Target, Search as SearchIcon,
 } from "lucide-react";
 import {
@@ -17,7 +17,6 @@ const pages = [
   { label: "Pacientes",     icon: Users,           path: "/patients" },
   { label: "Médicos",       icon: Stethoscope,     path: "/professionals" },
   { label: "Agenda",        icon: Calendar,        path: "/agenda" },
-  { label: "Prontuários",   icon: ClipboardList,   path: "/records" },
   { label: "Financeiro",    icon: DollarSign,      path: "/financeiro" },
   { label: "Atividades",    icon: Activity,        path: "/activities" },
   { label: "Automações",    icon: Zap,             path: "/automations" },

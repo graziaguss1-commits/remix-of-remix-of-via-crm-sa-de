@@ -14,7 +14,6 @@ const mainItems = [
 ];
 
 const moreItems = [
-  { title: "Prontuários",   url: "/records" },
   { title: "Financeiro",    url: "/financeiro" },
   { title: "Automações",    url: "/automations" },
   { title: "Templates",     url: "/templates" },
