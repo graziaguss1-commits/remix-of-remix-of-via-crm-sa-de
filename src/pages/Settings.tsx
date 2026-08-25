@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { DIAS_SEM_RETORNO_PADRAO } from "@/lib/orgSettings";
 import { AnunciosSection } from "@/components/settings/AnunciosSection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -99,7 +100,7 @@ export default function Settings() {
 function GeneralTab({ orgId, userId, profile }: { orgId: string | null; userId?: string; profile: Profile | null }) {
   const { toast } = useToast();
   const [profileForm, setProfileForm] = useState({ name: "", title: "", timezone: "UTC" });
-  const [orgForm, setOrgForm] = useState({ name: "", slug: "", currency: "BRL", timezone: "America/Sao_Paulo" });
+  const [orgForm, setOrgForm] = useState({ name: "", slug: "", currency: "BRL", timezone: "America/Sao_Paulo", diasSemRetorno: String(DIAS_SEM_RETORNO_PADRAO) });
   const [orgSettings, setOrgSettings] = useState<Record<string, unknown>>({});
   const [industries, setIndustries] = useState<string[]>([]);
   const [newIndustry, setNewIndustry] = useState("");
@@ -120,7 +121,13 @@ function GeneralTab({ orgId, userId, profile }: { orgId: string | null; userId?:
         if (data) {
           const settings = (data.settings as Record<string, unknown>) || {};
           setOrgSettings(settings);
-          setOrgForm({ name: data.name, slug: data.slug, currency: (settings.currency as string) || "BRL", timezone: (settings.timezone as string) || "America/Sao_Paulo" });
+          setOrgForm({
+            name: data.name,
+            slug: data.slug,
+            currency: (settings.currency as string) || "BRL",
+            timezone: (settings.timezone as string) || "America/Sao_Paulo",
+            diasSemRetorno: String((settings.dias_sem_retorno as number) || DIAS_SEM_RETORNO_PADRAO),
+          });
           const savedIndustries = settings.industries as string[] | undefined;
           setIndustries(savedIndustries && savedIndustries.length > 0 ? savedIndustries : DEFAULT_INDUSTRIES);
         }
@@ -138,7 +145,13 @@ function GeneralTab({ orgId, userId, profile }: { orgId: string | null; userId?:
 
   const saveOrg = async () => {
     if (!orgId) return;
-    const mergedSettings = { ...orgSettings, currency: orgForm.currency, timezone: orgForm.timezone };
+    const dias = Math.min(365, Math.max(1, Number(orgForm.diasSemRetorno) || DIAS_SEM_RETORNO_PADRAO));
+    const mergedSettings = {
+      ...orgSettings,
+      currency: orgForm.currency,
+      timezone: orgForm.timezone,
+      dias_sem_retorno: dias,
+    };
     const { error } = await (supabase as any).from("organizations").update({
       name: orgForm.name,
       slug: orgForm.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
@@ -227,6 +240,22 @@ function GeneralTab({ orgId, userId, profile }: { orgId: string | null; userId?:
                   <SelectItem value="UTC">UTC</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Alerta de paciente sem retorno (dias)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={orgForm.diasSemRetorno}
+                onChange={(e) => setOrgForm({ ...orgForm, diasSemRetorno: e.target.value })}
+                className="h-8 text-xs"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                O painel lista o paciente quando a última consulta atendida passa desse prazo e não há retorno marcado.
+              </p>
             </div>
           </div>
           <Button size="sm" className="h-8 text-xs" onClick={saveOrg}>Salvar Organização</Button>

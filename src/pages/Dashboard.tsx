@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/hooks/useOrg";
+import { DIAS_SEM_RETORNO_PADRAO, getDiasSemRetorno } from "@/lib/orgSettings";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export default function Dashboard() {
   const [payments, setPayments] = useState<PaymentLite[]>([]);
   const [pendingActivities, setPendingActivities] = useState<ActivityPending[]>([]);
   const [overduePatients, setOverduePatients] = useState<OverduePatient[]>([]);
+  const [diasSemRetorno, setDiasSemRetorno] = useState(DIAS_SEM_RETORNO_PADRAO);
 
   const fetchData = useCallback(async () => {
     if (!orgId) return;
@@ -57,7 +59,9 @@ export default function Dashboard() {
       const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
       const last14 = new Date(now); last14.setDate(now.getDate() - 13); last14.setHours(0, 0, 0, 0);
-      const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(now.getDate() - 30);
+      const dias = await getDiasSemRetorno(orgId);
+      setDiasSemRetorno(dias);
+      const limiteSemRetorno = new Date(now); limiteSemRetorno.setDate(now.getDate() - dias);
 
       const [todayRes, monthRes, paymentsRes, pendingRes, attendedRes] = await Promise.all([
         (supabase as any)
@@ -122,7 +126,8 @@ export default function Dashboard() {
       setPayments(pays);
       setPendingActivities(pending);
 
-      // Overdue patients: last "attended" appointment > 30 days ago, no future appointment
+      // Pacientes sem retorno: ultima consulta atendida alem do prazo configurado
+      // em Configuracoes -> Geral, e sem retorno ja marcado.
       const lastAttendedByPatient = new Map<string, string>();
       for (const a of (attendedRes.data ?? []) as any[]) {
         if (!a.contact_id || !a.due_date) continue;
@@ -132,7 +137,7 @@ export default function Dashboard() {
         }
       }
       const overdueIds = Array.from(lastAttendedByPatient.entries())
-        .filter(([, last]) => new Date(last) < thirtyDaysAgo)
+        .filter(([, last]) => new Date(last) < limiteSemRetorno)
         .slice(0, 50)
         .map(([id]) => id);
       if (overdueIds.length > 0) {
@@ -379,7 +384,7 @@ export default function Dashboard() {
 
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Sem retorno há 30+ dias</h3>
+            <h3 className="text-sm font-semibold">Sem retorno há {diasSemRetorno}+ dias</h3>
             <Link to="/patients" className="text-xs text-primary hover:underline">Ver pacientes</Link>
           </div>
           {overduePatients.length === 0 ? (
