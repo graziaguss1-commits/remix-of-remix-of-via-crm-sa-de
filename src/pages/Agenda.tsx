@@ -6,42 +6,35 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus, Search, Calendar as CalendarIcon, Check, XCircle, AlertTriangle, ListChecks,
-  ChevronLeft, ChevronRight, List as ListIcon, LayoutGrid,
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Plus, Search, Check, XCircle, AlertTriangle, ListChecks, Lock,
+  ChevronLeft, ChevronRight, CalendarDays, CalendarRange,
 } from "lucide-react";
-import {
-  addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay,
-  isSameMonth, startOfMonth, startOfWeek, subMonths,
-} from "date-fns";
+import { addDays, addWeeks, endOfWeek, format, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { EmptyState } from "@/components/crm/EmptyState";
 import { AppointmentCreateModal } from "@/components/health/AppointmentCreateModal";
+import { BloqueioCreateModal } from "@/components/health/BloqueioCreateModal";
 import { PatientDrawer } from "@/components/health/PatientDrawer";
+import { AgendaGrid, GridAppointment, GridBloqueio } from "@/components/health/AgendaGrid";
 import {
-  APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_BADGE, APPOINTMENT_TYPE_LABELS,
+  APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS,
   AppointmentStatus, AppointmentType, fullName,
 } from "@/components/health/types";
 
-interface AppointmentRow {
-  id: string;
-  title: string;
-  body: string | null;
-  due_date: string | null;
-  appointment_status: AppointmentStatus;
+interface AppointmentRow extends GridAppointment {
   appointment_type: AppointmentType | null;
-  duration_minutes: number | null;
   professional_id: string | null;
   contact_id: string | null;
-  patient?: { id: string; first_name: string; last_name: string | null; phone: string } | null;
-  professional?: { id: string; name: string } | null;
 }
+
+type Modo = "semana" | "dia";
 
 export default function Agenda() {
   const { orgId } = useOrg();
@@ -50,30 +43,44 @@ export default function Agenda() {
   const defaultPatient = params.get("patient") ?? undefined;
 
   const [rows, setRows] = useState<AppointmentRow[]>([]);
+  const [bloqueios, setBloqueios] = useState<GridBloqueio[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [professionalFilter, setProfessionalFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [professionalFilter, setProfessionalFilter] = useState("all");
   const [professionals, setProfessionals] = useState<{ id: string; name: string }[]>([]);
   const [createOpen, setCreateOpen] = useState<boolean>(Boolean(defaultPatient));
+  const [bloqueioOpen, setBloqueioOpen] = useState(false);
+  const [bloqueioQuando, setBloqueioQuando] = useState<Date | null>(null);
   const [drawerPatientId, setDrawerPatientId] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [detalheId, setDetalheId] = useState<string | null>(null);
+
+  const [modo, setModo] = useState<Modo>("semana");
   const [cursor, setCursor] = useState<Date>(new Date());
-  const [selectedDay, setSelectedDay] = useState<Date>(new Date());
+
+  /** Intervalo visivel, base de todas as buscas. */
+  const intervalo = useMemo(() => {
+    if (modo === "dia") {
+      const ini = new Date(cursor); ini.setHours(0, 0, 0, 0);
+      const fim = new Date(cursor); fim.setHours(23, 59, 59, 999);
+      return { ini, fim };
+    }
+    return {
+      ini: startOfWeek(cursor, { weekStartsOn: 1 }),
+      fim: endOfWeek(cursor, { weekStartsOn: 1 }),
+    };
+  }, [modo, cursor]);
 
   const fetchProfessionals = useCallback(async () => {
     if (!orgId) return;
     const { data } = await (supabase as any)
-      .from("professionals")
-      .select("id,name")
-      .eq("org_id", orgId)
-      .eq("is_active", true)
-      .order("name");
+      .from("professionals").select("id,name")
+      .eq("org_id", orgId).eq("is_active", true).order("name");
     setProfessionals((data ?? []) as { id: string; name: string }[]);
   }, [orgId]);
 
-  const fetchAppointments = useCallback(async () => {
+  const fetchAgenda = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
     try {
@@ -86,8 +93,9 @@ export default function Agenda() {
         )
         .eq("org_id", orgId)
         .not("appointment_status", "is", null)
-        .order("due_date", { ascending: false })
-        .limit(200);
+        .gte("due_date", intervalo.ini.toISOString())
+        .lte("due_date", intervalo.fim.toISOString())
+        .order("due_date");
 
       if (statusFilter !== "all") q = q.eq("appointment_status", statusFilter);
       if (typeFilter !== "all") q = q.eq("appointment_type", typeFilter);
@@ -95,102 +103,105 @@ export default function Agenda() {
 
       const { data, error } = await q;
       if (error) {
-        // Fall back to query without FK aliases (when types not yet present)
-        const { data: rawData, error: rawErr } = await (supabase as any)
+        const { data: raw, error: rawErr } = await (supabase as any)
           .from("activities")
           .select("id,title,body,due_date,appointment_status,appointment_type,duration_minutes,professional_id,contact_id")
           .eq("org_id", orgId)
           .not("appointment_status", "is", null)
-          .order("due_date", { ascending: false })
-          .limit(200);
+          .gte("due_date", intervalo.ini.toISOString())
+          .lte("due_date", intervalo.fim.toISOString())
+          .order("due_date");
         if (rawErr) throw rawErr;
-        setRows((rawData ?? []) as AppointmentRow[]);
+        setRows((raw ?? []) as AppointmentRow[]);
       } else {
         setRows((data ?? []) as AppointmentRow[]);
       }
+
+      let qb = (supabase as any)
+        .from("agenda_bloqueios")
+        .select("id,titulo,inicio,fim,observacao,professional_id")
+        .eq("org_id", orgId)
+        .gte("inicio", intervalo.ini.toISOString())
+        .lte("inicio", intervalo.fim.toISOString())
+        .order("inicio");
+      if (professionalFilter !== "all") {
+        qb = qb.or(`professional_id.eq.${professionalFilter},professional_id.is.null`);
+      }
+      const { data: blocos } = await qb;
+      setBloqueios((blocos ?? []) as GridBloqueio[]);
     } catch (err: any) {
       toast({ title: "Erro ao carregar agenda", description: err?.message ?? String(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [orgId, statusFilter, typeFilter, professionalFilter, toast]);
+  }, [orgId, statusFilter, typeFilter, professionalFilter, intervalo, toast]);
 
   useEffect(() => { void fetchProfessionals(); }, [fetchProfessionals]);
-  useEffect(() => { void fetchAppointments(); }, [fetchAppointments]);
+  useEffect(() => { void fetchAgenda(); }, [fetchAgenda]);
 
-  const filtered = useMemo(() => {
+  const consultas = useMemo(() => {
     if (!search.trim()) return rows;
-    const term = search.trim().toLowerCase();
+    const termo = search.trim().toLowerCase();
     return rows.filter((r) => {
-      const name = r.patient ? fullName(r.patient).toLowerCase() : "";
-      return name.includes(term) || (r.title ?? "").toLowerCase().includes(term);
+      const nome = r.patient ? fullName(r.patient).toLowerCase() : "";
+      return nome.includes(termo) || (r.title ?? "").toLowerCase().includes(termo);
     });
   }, [rows, search]);
 
-  const grouped = useMemo(() => {
-    const byDay: Record<string, AppointmentRow[]> = {};
-    for (const r of filtered) {
-      const key = r.due_date ? new Date(r.due_date).toISOString().slice(0, 10) : "sem-data";
-      if (!byDay[key]) byDay[key] = [];
-      byDay[key].push(r);
-    }
-    return Object.entries(byDay).sort(([a], [b]) => (a < b ? 1 : -1));
-  }, [filtered]);
-
-  const monthDays = useMemo(() => {
-    const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 0 });
-    const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 0 });
-    return eachDayOfInterval({ start, end });
-  }, [cursor]);
-
-  const byDayMap = useMemo(() => {
-    const m = new Map<string, AppointmentRow[]>();
-    for (const r of filtered) {
-      if (!r.due_date) continue;
-      const key = format(new Date(r.due_date), "yyyy-MM-dd");
-      const arr = m.get(key) ?? [];
-      arr.push(r);
-      m.set(key, arr);
-    }
-    // sort each day by time
-    for (const arr of m.values()) {
-      arr.sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1));
-    }
-    return m;
-  }, [filtered]);
-
-  const selectedDayAppts = byDayMap.get(format(selectedDay, "yyyy-MM-dd")) ?? [];
+  const detalhe = useMemo(
+    () => consultas.find((c) => c.id === detalheId) ?? null,
+    [consultas, detalheId],
+  );
 
   const updateStatus = async (id: string, status: AppointmentStatus) => {
     try {
       const { error } = await (supabase as any)
-        .from("activities")
-        .update({ appointment_status: status })
-        .eq("id", id);
+        .from("activities").update({ appointment_status: status }).eq("id", id);
       if (error) throw error;
       toast({ title: "Status atualizado", description: APPOINTMENT_STATUS_LABELS[status] });
-      void fetchAppointments();
+      setDetalheId(null);
+      void fetchAgenda();
     } catch (err: any) {
       toast({ title: "Erro ao atualizar", description: err?.message ?? String(err), variant: "destructive" });
     }
   };
 
-  const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+  const removerBloqueio = async (id: string) => {
+    try {
+      const { error } = await (supabase as any).from("agenda_bloqueios").delete().eq("id", id);
+      if (error) throw error;
+      toast({ title: "Bloqueio removido" });
+      void fetchAgenda();
+    } catch (err: any) {
+      toast({ title: "Erro ao remover", description: err?.message ?? String(err), variant: "destructive" });
+    }
+  };
+
+  const navegar = (direcao: -1 | 1) => {
+    setCursor((c) => (modo === "dia" ? addDays(c, direcao) : addWeeks(c, direcao)));
+  };
+
+  const rotuloPeriodo = modo === "dia"
+    ? format(cursor, "EEEE, d 'de' MMMM", { locale: ptBR })
+    : `${format(intervalo.ini, "d MMM", { locale: ptBR })} – ${format(intervalo.fim, "d MMM yyyy", { locale: ptBR })}`;
 
   return (
     <div className="space-y-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Agenda</h1>
-          <p className="text-sm text-muted-foreground capitalize">{today}</p>
+          <p className="text-sm capitalize text-muted-foreground">{rotuloPeriodo}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Tabs value={view} onValueChange={(v) => setView(v as "list" | "calendar")}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Tabs value={modo} onValueChange={(v) => setModo(v as Modo)}>
             <TabsList>
-              <TabsTrigger value="list"><ListIcon className="mr-1 h-3.5 w-3.5" /> Lista</TabsTrigger>
-              <TabsTrigger value="calendar"><LayoutGrid className="mr-1 h-3.5 w-3.5" /> Calendário</TabsTrigger>
+              <TabsTrigger value="semana"><CalendarRange className="mr-1 h-3.5 w-3.5" /> Semana</TabsTrigger>
+              <TabsTrigger value="dia"><CalendarDays className="mr-1 h-3.5 w-3.5" /> Dia</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Button variant="outline" onClick={() => { setBloqueioQuando(null); setBloqueioOpen(true); }}>
+            <Lock className="mr-2 h-4 w-4" /> Bloquear
+          </Button>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Nova consulta
           </Button>
@@ -199,17 +210,28 @@ export default function Agenda() {
 
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" onClick={() => navegar(-1)} aria-label="Anterior">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCursor(new Date())}>Hoje</Button>
+            <Button variant="outline" size="icon" onClick={() => navegar(1)} aria-label="Próximo">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar paciente ou consulta…"
+              placeholder="Buscar paciente…"
               className="pl-9"
             />
           </div>
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-[170px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos status</SelectItem>
               {Object.entries(APPOINTMENT_STATUS_LABELS).map(([k, v]) => (
@@ -217,8 +239,9 @@ export default function Agenda() {
               ))}
             </SelectContent>
           </Select>
+
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+            <SelectTrigger className="w-[170px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos tipos</SelectItem>
               {Object.entries(APPOINTMENT_TYPE_LABELS).map(([k, v]) => (
@@ -226,8 +249,9 @@ export default function Agenda() {
               ))}
             </SelectContent>
           </Select>
+
           <Select value={professionalFilter} onValueChange={setProfessionalFilter}>
-            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Médico" /></SelectTrigger>
+            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Médico" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os médicos</SelectItem>
               {professionals.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
@@ -238,200 +262,107 @@ export default function Agenda() {
 
       {loading ? (
         <div className="py-10 text-center text-sm text-muted-foreground">Carregando…</div>
-      ) : view === "list" && filtered.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<CalendarIcon className="h-7 w-7 text-muted-foreground" />}
-            title="Nenhuma consulta encontrada"
-            description="Agende a primeira consulta para começar a montar a agenda."
-            actionLabel="Agendar primeira consulta"
-            onAction={() => setCreateOpen(true)}
-          />
-        </Card>
-      ) : view === "list" ? (
-        <div className="space-y-4">
-          {grouped.map(([day, list]) => (
-            <div key={day} className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {day === "sem-data" ? "Sem data" : new Date(day + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
-              </h3>
-              <div className="space-y-2">
-                {list.map((a) => (
-                  <Card key={a.id} className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Badge className={APPOINTMENT_STATUS_BADGE[a.appointment_status] ?? ""}>
-                            {APPOINTMENT_STATUS_LABELS[a.appointment_status] ?? a.appointment_status}
-                          </Badge>
-                          {a.appointment_type && (
-                            <span className="text-xs text-muted-foreground">
-                              {APPOINTMENT_TYPE_LABELS[a.appointment_type] ?? a.appointment_type}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-2 font-medium truncate">
-                          {a.patient ? fullName(a.patient) : a.title || "Sem paciente"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {a.due_date ? new Date(a.due_date).toLocaleString("pt-BR") : "Sem data"}
-                          {a.duration_minutes ? ` · ${a.duration_minutes} min` : ""}
-                          {a.professional?.name ? ` · ${a.professional.name}` : ""}
-                        </p>
-                        {a.body && <p className="mt-2 text-sm">{a.body}</p>}
-                      </div>
-                      <div className="flex flex-wrap gap-1 shrink-0">
-                        {a.appointment_status === "scheduled" && (
-                          <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "confirmed")}>
-                            <Check className="mr-1 h-3 w-3" /> Confirmar
-                          </Button>
-                        )}
-                        {a.appointment_status === "confirmed" && (
-                          <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "attended")}>
-                            <ListChecks className="mr-1 h-3 w-3" /> Atendido
-                          </Button>
-                        )}
-                        {a.appointment_status !== "no_show" && a.appointment_status !== "attended" && a.appointment_status !== "cancelled" && (
-                          <Button size="sm" variant="ghost" onClick={() => updateStatus(a.id, "no_show")}>
-                            <AlertTriangle className="mr-1 h-3 w-3" /> No-show
-                          </Button>
-                        )}
-                        {a.appointment_status !== "cancelled" && a.appointment_status !== "attended" && (
-                          <Button size="sm" variant="ghost" onClick={() => updateStatus(a.id, "cancelled")}>
-                            <XCircle className="mr-1 h-3 w-3" /> Cancelar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold capitalize">
-                {format(cursor, "MMMM yyyy", { locale: ptBR })}
-              </h3>
-              <div className="flex items-center gap-1">
-                <Button size="icon" variant="ghost" onClick={() => setCursor((d) => subMonths(d, 1))}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => { const t = new Date(); setCursor(t); setSelectedDay(t); }}>
-                  Hoje
-                </Button>
-                <Button size="icon" variant="ghost" onClick={() => setCursor((d) => addMonths(d, 1))}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-px text-xs">
-              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
-                <div key={d} className="px-2 py-1 text-center font-medium text-muted-foreground">{d}</div>
-              ))}
-              {monthDays.map((d) => {
-                const key = format(d, "yyyy-MM-dd");
-                const dayAppts = byDayMap.get(key) ?? [];
-                const inMonth = isSameMonth(d, cursor);
-                const isSelected = isSameDay(d, selectedDay);
-                const isToday = isSameDay(d, new Date());
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setSelectedDay(d)}
-                    className={cn(
-                      "min-h-[80px] rounded-md border p-1.5 text-left transition-colors hover:bg-accent",
-                      !inMonth && "opacity-40",
-                      isSelected && "border-primary ring-1 ring-primary",
-                      !isSelected && "border-border",
-                    )}
-                  >
-                    <div className={cn(
-                      "text-xs font-medium",
-                      isToday && "inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
-                    )}>
-                      {format(d, "d")}
-                    </div>
-                    <div className="mt-1 space-y-0.5">
-                      {dayAppts.slice(0, 3).map((a) => (
-                        <div
-                          key={a.id}
-                          className={cn(
-                            "truncate rounded px-1 py-0.5 text-[10px]",
-                            APPOINTMENT_STATUS_BADGE[a.appointment_status] ?? "bg-muted text-foreground"
-                          )}
-                        >
-                          {a.due_date ? format(new Date(a.due_date), "HH:mm") : ""} {a.patient ? fullName(a.patient) : a.title}
-                        </div>
-                      ))}
-                      {dayAppts.length > 3 && (
-                        <div className="text-[10px] text-muted-foreground">+{dayAppts.length - 3} mais</div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-
-          <Card className="p-4 space-y-3">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">Detalhes do dia</p>
-              <h3 className="text-base font-semibold capitalize">
-                {format(selectedDay, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-              </h3>
-              <p className="text-xs text-muted-foreground">{selectedDayAppts.length} consulta(s)</p>
-            </div>
-            {selectedDayAppts.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">Sem consultas neste dia.</p>
-            ) : (
-              <div className="space-y-2">
-                {selectedDayAppts.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => a.patient?.id && setDrawerPatientId(a.patient.id)}
-                    disabled={!a.patient?.id}
-                    className="w-full text-left rounded-md border p-2.5 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-mono">
-                        {a.due_date ? format(new Date(a.due_date), "HH:mm") : "--:--"}
-                        {a.duration_minutes ? ` · ${a.duration_minutes}min` : ""}
-                      </span>
-                      <Badge className={APPOINTMENT_STATUS_BADGE[a.appointment_status] ?? ""}>
-                        {APPOINTMENT_STATUS_LABELS[a.appointment_status] ?? a.appointment_status}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm font-medium truncate">
-                      {a.patient ? fullName(a.patient) : a.title || "Sem paciente"}
-                    </p>
-                    {a.professional?.name && (
-                      <p className="text-xs text-muted-foreground truncate">{a.professional.name}</p>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
+        <AgendaGrid
+          modo={modo}
+          cursor={cursor}
+          consultas={consultas}
+          bloqueios={bloqueios}
+          onSelecionarConsulta={setDetalheId}
+          onSelecionarBloqueio={(id) => {
+            const b = bloqueios.find((x) => x.id === id);
+            if (b && window.confirm(`Remover o bloqueio "${b.titulo}"?`)) void removerBloqueio(id);
+          }}
+          onSelecionarVazio={(quando) => { setBloqueioQuando(quando); setBloqueioOpen(true); }}
+        />
       )}
+
+      <Sheet open={detalhe !== null} onOpenChange={(o) => { if (!o) setDetalheId(null); }}>
+        <SheetContent className="w-full sm:max-w-md">
+          {detalhe && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{detalhe.patient ? fullName(detalhe.patient) : detalhe.title}</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-4 text-sm">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Horário</p>
+                  <p className="capitalize">
+                    {detalhe.due_date
+                      ? format(new Date(detalhe.due_date), "EEEE, d 'de' MMMM 'às' HH:mm", { locale: ptBR })
+                      : "Sem data"}
+                    {detalhe.duration_minutes ? ` · ${detalhe.duration_minutes} min` : ""}
+                  </p>
+                </div>
+                {detalhe.professional?.name && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Médico</p>
+                    <p>{detalhe.professional.name}</p>
+                  </div>
+                )}
+                {detalhe.patient?.phone && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Telefone</p>
+                    <p>{detalhe.patient.phone}</p>
+                  </div>
+                )}
+                {detalhe.body && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Observações</p>
+                    <p className="whitespace-pre-wrap">{detalhe.body}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button size="sm" variant="outline" onClick={() => updateStatus(detalhe.id, "confirmed")}>
+                    <Check className="mr-1 h-3.5 w-3.5" /> Confirmar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => updateStatus(detalhe.id, "attended")}>
+                    <ListChecks className="mr-1 h-3.5 w-3.5" /> Atendida
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => updateStatus(detalhe.id, "no_show")}>
+                    <AlertTriangle className="mr-1 h-3.5 w-3.5" /> Faltou
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => updateStatus(detalhe.id, "cancelled")}>
+                    <XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar
+                  </Button>
+                </div>
+
+                {detalhe.patient?.id && (
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => { setDrawerPatientId(detalhe.patient!.id); setDetalheId(null); }}
+                  >
+                    Abrir ficha do paciente
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       <AppointmentCreateModal
         open={createOpen}
         onOpenChange={setCreateOpen}
         defaultPatientId={defaultPatient}
-        onCreated={() => void fetchAppointments()}
+        onCreated={() => void fetchAgenda()}
+      />
+
+      <BloqueioCreateModal
+        open={bloqueioOpen}
+        onOpenChange={setBloqueioOpen}
+        professionals={professionals}
+        quandoInicial={bloqueioQuando}
+        onCreated={() => void fetchAgenda()}
       />
 
       <PatientDrawer
         patientId={drawerPatientId}
         open={drawerPatientId !== null}
         onOpenChange={(o) => { if (!o) setDrawerPatientId(null); }}
-        onUpdated={() => void fetchAppointments()}
+        onUpdated={() => void fetchAgenda()}
       />
     </div>
   );
