@@ -400,9 +400,57 @@ export type Database = {
           },
         ]
       }
+      contact_tags: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          org_id: string
+          tag_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          org_id: string
+          tag_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_tags_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_tags_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
+          anuncio: string | null
           avatar_url: string | null
+          canal: string | null
           company_id: string | null
           created_at: string
           email: string | null
@@ -410,6 +458,7 @@ export type Database = {
           fonte: string | null
           id: string
           imovel_interesse_id: string | null
+          indicado_por_contact_id: string | null
           last_name: string | null
           lead_score: number | null
           metadata: Json
@@ -418,10 +467,13 @@ export type Database = {
           phone: string | null
           status: string | null
           tags: string[] | null
+          temperatura: string | null
           updated_at: string
         }
         Insert: {
+          anuncio?: string | null
           avatar_url?: string | null
+          canal?: string | null
           company_id?: string | null
           created_at?: string
           email?: string | null
@@ -429,6 +481,7 @@ export type Database = {
           fonte?: string | null
           id?: string
           imovel_interesse_id?: string | null
+          indicado_por_contact_id?: string | null
           last_name?: string | null
           lead_score?: number | null
           metadata?: Json
@@ -437,10 +490,13 @@ export type Database = {
           phone?: string | null
           status?: string | null
           tags?: string[] | null
+          temperatura?: string | null
           updated_at?: string
         }
         Update: {
+          anuncio?: string | null
           avatar_url?: string | null
+          canal?: string | null
           company_id?: string | null
           created_at?: string
           email?: string | null
@@ -448,6 +504,7 @@ export type Database = {
           fonte?: string | null
           id?: string
           imovel_interesse_id?: string | null
+          indicado_por_contact_id?: string | null
           last_name?: string | null
           lead_score?: number | null
           metadata?: Json
@@ -456,9 +513,17 @@ export type Database = {
           phone?: string | null
           status?: string | null
           tags?: string[] | null
+          temperatura?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contacts_indicado_por_contact_id_fkey"
+            columns: ["indicado_por_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contacts_org_id_fkey"
             columns: ["org_id"]
@@ -515,6 +580,128 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_objecoes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deal_id: string
+          id: string
+          objecao_id: string
+          org_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deal_id: string
+          id?: string
+          objecao_id: string
+          org_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string
+          id?: string
+          objecao_id?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_objecoes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_objecoes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_objecoes_objecao_id_fkey"
+            columns: ["objecao_id"]
+            isOneToOne: false
+            referencedRelation: "objecoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_objecoes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_stage_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          deal_id: string
+          from_stage_id: string | null
+          id: string
+          org_id: string
+          to_stage_id: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          deal_id: string
+          from_stage_id?: string | null
+          id?: string
+          org_id: string
+          to_stage_id?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          deal_id?: string
+          from_stage_id?: string | null
+          id?: string
+          org_id?: string
+          to_stage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_stage_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_stage_history_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_stage_history_from_stage_id_fkey"
+            columns: ["from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_stage_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_stage_history_to_stage_id_fkey"
+            columns: ["to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -788,6 +975,83 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follow_ups: {
+        Row: {
+          canal: string
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          data_agendada: string
+          deal_id: string | null
+          id: string
+          observacao: string | null
+          org_id: string
+          realizado_em: string | null
+          resultado: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canal?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_agendada?: string
+          deal_id?: string | null
+          id?: string
+          observacao?: string | null
+          org_id: string
+          realizado_em?: string | null
+          resultado?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canal?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_agendada?: string
+          deal_id?: string | null
+          id?: string
+          observacao?: string | null
+          org_id?: string
+          realizado_em?: string | null
+          resultado?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_ups_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1209,6 +1473,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      objecoes: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          label: string
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objecoes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1852,6 +2151,7 @@ export type Database = {
       }
       tags: {
         Row: {
+          categoria: string
           color: string | null
           created_at: string
           id: string
@@ -1859,6 +2159,7 @@ export type Database = {
           org_id: string
         }
         Insert: {
+          categoria?: string
           color?: string | null
           created_at?: string
           id?: string
@@ -1866,6 +2167,7 @@ export type Database = {
           org_id: string
         }
         Update: {
+          categoria?: string
           color?: string | null
           created_at?: string
           id?: string

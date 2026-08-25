@@ -9,6 +9,7 @@ import {
   DollarSign,
   Activity,
   Kanban,
+  CalendarClock,
   BarChart3,
   Target,
   Settings,
@@ -47,6 +48,7 @@ const generalItems = [
 const operationalItems = [
   { title: "Automações", url: "/automations", icon: Zap },
   { title: "Pipeline",   url: "/pipeline",    icon: Kanban },
+  { title: "Follow-ups", url: "/follow-ups",  icon: CalendarClock },
   { title: "Financeiro", url: "/financeiro",  icon: DollarSign },
   { title: "Atividades", url: "/activities",  icon: Activity },
 ];
