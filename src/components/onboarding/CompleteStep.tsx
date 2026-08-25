@@ -34,12 +34,6 @@ export function CompleteStep({ stepData, completedSteps, onComplete }: Onboardin
       configured: completedSteps.has("pipeline") || !!stepData.pipelineName,
     },
     {
-      key: "email",
-      label: "Email (Resend)",
-      value: stepData.emailFrom || "Não configurado",
-      configured: !!stepData.emailConfigured,
-    },
-    {
       key: "slack",
       label: "Slack",
       value: stepData.slackWorkspace || "Não configurado",
