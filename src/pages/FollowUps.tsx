@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/crm/EmptyState";
-import { CalendarClock, Check, Phone, X } from "lucide-react";
+import { CalendarClock, Check, ExternalLink, Phone, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { TemperaturaBadge } from "@/components/leads/LeadCard";
 
 type Row = {
@@ -160,6 +161,13 @@ export default function FollowUps() {
                             <Button size="sm" variant="outline" className="gap-1" onClick={() => setDoneId(r.id)}>
                               <Check className="h-3.5 w-3.5" /> Realizado
                             </Button>
+                            {r.deal_id && (
+                              <Button asChild size="sm" variant="outline" className="gap-1">
+                                <Link to={`/pipeline?lead=${r.deal_id}`}>
+                                  <ExternalLink className="h-3.5 w-3.5" /> Abrir lead
+                                </Link>
+                              </Button>
+                            )}
                             <Button size="sm" variant="ghost" onClick={() => cancelar(r.id)}>
                               <X className="h-4 w-4" />
                             </Button>
