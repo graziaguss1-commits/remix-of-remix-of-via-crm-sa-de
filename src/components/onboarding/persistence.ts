@@ -96,14 +96,11 @@ export function getResumeStep(savedStep: number | null | undefined, completedSte
   // If nothing is completed, start at Welcome (step 0)
   if (completedSteps.size === 0) return 0;
 
-  const savedIndex = Math.min(4, Math.max(0, (savedStep ?? 1) - 1));
+  const savedIndex = Math.min(3, Math.max(0, (savedStep ?? 1) - 1));
 
   if (!completedSteps.has("company")) return 1;
   if (!completedSteps.has("pipeline")) return 2;
 
-  let resume = Math.max(savedIndex, 3);
-
-  if (resume === 3 && completedSteps.has("slack")) resume = 4;
-
-  return resume;
+  // Company e Pipeline concluidos: o assistente so tem a Conclusao pela frente.
+  return Math.max(savedIndex, 3);
 }

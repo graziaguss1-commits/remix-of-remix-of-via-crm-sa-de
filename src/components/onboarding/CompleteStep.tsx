@@ -33,12 +33,6 @@ export function CompleteStep({ stepData, completedSteps, onComplete }: Onboardin
         : undefined,
       configured: completedSteps.has("pipeline") || !!stepData.pipelineName,
     },
-    {
-      key: "slack",
-      label: "Slack",
-      value: stepData.slackWorkspace || "Não configurado",
-      configured: !!stepData.slackConfigured,
-    },
   ];
 
   const configuredCount = items.filter((i) => i.configured).length;
