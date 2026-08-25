@@ -34,6 +34,10 @@ export const TAG_CATEGORIA_LABELS: Record<TagCategoria, string> = {
   geral: "Geral",
 };
 
+/** Categorias oferecidas ao criar uma tag. Temperatura fica de fora: o lead
+ *  ja tem campo proprio para isso. */
+export const TAG_CATEGORIAS_DISPONIVEIS: TagCategoria[] = ["interesse", "anuncio", "objecao", "geral"];
+
 export const STAGE_NAMES = [
   "Novo Lead",
   "Parou Antes do Valor",

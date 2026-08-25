@@ -111,10 +111,13 @@ export function useTags() {
     queryKey: ["lead-tags", orgId],
     enabled: !!orgId,
     queryFn: async () => {
+      // Temperatura tem campo proprio no lead; tags dessa categoria seriam uma
+      // segunda fonte de verdade para o mesmo dado, entao ficam de fora.
       const { data } = await supabase
         .from("tags")
         .select("id,name,color,categoria")
         .eq("org_id", orgId!)
+        .neq("categoria", "temperatura")
         .order("categoria")
         .order("name");
       return (data ?? []) as LeadTag[];

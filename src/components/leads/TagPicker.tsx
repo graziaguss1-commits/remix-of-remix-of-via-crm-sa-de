@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Tag as TagIcon, X } from "lucide-react";
-import { TAG_CATEGORIA_LABELS, TAG_COLORS, type LeadTag, type TagCategoria } from "./constants";
+import { TAG_CATEGORIAS_DISPONIVEIS, TAG_CATEGORIA_LABELS, TAG_COLORS, type LeadTag, type TagCategoria } from "./constants";
 
 export function TagChip({ tag, onRemove }: { tag: LeadTag; onRemove?: () => void }) {
   return (
@@ -130,7 +130,7 @@ export function TagPicker({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(TAG_CATEGORIA_LABELS) as TagCategoria[]).map((c) => (
+                    {TAG_CATEGORIAS_DISPONIVEIS.map((c) => (
                       <SelectItem key={c} value={c}>
                         {TAG_CATEGORIA_LABELS[c]}
                       </SelectItem>

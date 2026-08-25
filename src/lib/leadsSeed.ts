@@ -1,12 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_PIPELINE_NAME, STAGE_NAMES } from "@/components/leads/constants";
 
-const TEMPERATURA_TAGS = [
-  { name: "Quente", color: "#ef4444" },
-  { name: "Morno", color: "#f97316" },
-  { name: "Frio", color: "#3b82f6" },
-];
-
 const OBJECOES_INICIAIS = [
   "Preço",
   "Vai pensar",
@@ -75,22 +69,7 @@ export async function seedLeadsConfig(orgId: string): Promise<string | null> {
     if (error) throw error;
   }
 
-  // 3. Tags de temperatura
-  const { data: tags } = await supabase
-    .from("tags")
-    .select("id, name")
-    .eq("org_id", orgId)
-    .eq("categoria", "temperatura");
-
-  const existingTags = new Set((tags ?? []).map((t) => t.name));
-  const missingTags = TEMPERATURA_TAGS.filter((t) => !existingTags.has(t.name));
-  if (missingTags.length) {
-    await supabase
-      .from("tags")
-      .insert(missingTags.map((t) => ({ org_id: orgId, name: t.name, color: t.color, categoria: "temperatura" })));
-  }
-
-  // 4. Objeções
+  // 3. Objeções
   const { data: objecoes } = await supabase.from("objecoes").select("label").eq("org_id", orgId);
   const existingObj = new Set((objecoes ?? []).map((o) => o.label));
   const missingObj = OBJECOES_INICIAIS.filter((label) => !existingObj.has(label));
