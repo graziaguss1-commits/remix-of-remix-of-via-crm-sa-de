@@ -103,9 +103,8 @@ export function getResumeStep(savedStep: number | null | undefined, completedSte
 
   let resume = Math.max(savedIndex, 3);
 
-  if (resume === 3 && completedSteps.has("ai")) resume = 4;
-  if (resume === 4 && completedSteps.has("email")) resume = 5;
-  if (resume === 5 && completedSteps.has("slack")) resume = 6;
+  if (resume === 3 && completedSteps.has("email")) resume = 4;
+  if (resume === 4 && completedSteps.has("slack")) resume = 5;
 
   return resume;
 }

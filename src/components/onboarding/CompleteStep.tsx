@@ -34,12 +34,6 @@ export function CompleteStep({ stepData, completedSteps, onComplete }: Onboardin
       configured: completedSteps.has("pipeline") || !!stepData.pipelineName,
     },
     {
-      key: "ai",
-      label: "IA Clínica",
-      value: stepData.aiConfigured ? "Claude ativo" : "Não configurado",
-      configured: !!stepData.aiConfigured,
-    },
-    {
       key: "email",
       label: "Email (Resend)",
       value: stepData.emailFrom || "Não configurado",
