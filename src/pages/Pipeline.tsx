@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, useDroppable } from "@dnd-kit/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,11 +50,25 @@ export default function Pipeline() {
   const [selected, setSelected] = useState<Lead | null>(null);
   const [pendingLoss, setPendingLoss] = useState<{ lead: Lead; stageId: string } | null>(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const stages = data?.stages ?? [];
   const leads = data?.leads ?? [];
   const currency = data?.currency ?? "BRL";
+
+  const leadParam = searchParams.get("lead");
+  useEffect(() => {
+    if (!leadParam) return;
+    const found = (data?.leads ?? []).find((l) => l.id === leadParam);
+    if (found) {
+      setSelected(found);
+      searchParams.delete("lead");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadParam, data?.leads]);
 
   const anuncios = useMemo(
     () => Array.from(new Set(leads.map((l) => l.contact?.anuncio).filter(Boolean) as string[])).sort(),
