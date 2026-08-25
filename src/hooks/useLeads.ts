@@ -198,3 +198,21 @@ export function useStageHistory(dealId: string | null) {
     },
   });
 }
+
+/** Anuncios ativos da org, para o campo de cadastro de lead. */
+export function useAnuncios() {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: ["anuncios", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("anuncios")
+        .select("id,nome,canal")
+        .eq("org_id", orgId!)
+        .eq("ativo", true)
+        .order("nome");
+      return (data ?? []) as { id: string; nome: string; canal: string | null }[];
+    },
+  });
+}

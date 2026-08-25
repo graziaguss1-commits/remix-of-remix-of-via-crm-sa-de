@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrg } from "@/hooks/useOrg";
 import { useToast } from "@/hooks/use-toast";
 import {
-  useContactsLite, useDealObjecoes, useLeadFollowUps, useObjecoes, useStageHistory, type Stage,
+  useAnuncios, useContactsLite, useDealObjecoes, useLeadFollowUps, useObjecoes, useStageHistory, type Stage,
 } from "@/hooks/useLeads";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,10 @@ function toLocalInput(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const SEM_ANUNCIO = "sem-anuncio";
+
 export function LeadDrawer({ lead, stages, currency, open, onOpenChange, onChanged }: Props) {
+  const { data: anunciosLista = [] } = useAnuncios();
   const { orgId } = useOrg();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -312,7 +315,21 @@ export function LeadDrawer({ lead, stages, currency, open, onOpenChange, onChang
 
             <div className="space-y-1.5">
               <Label>Anúncio / criativo</Label>
-              <Input value={form.anuncio} onChange={(e) => setForm({ ...form, anuncio: e.target.value })} />
+              <Select
+                value={form.anuncio || SEM_ANUNCIO}
+                onValueChange={(v) => setForm({ ...form, anuncio: v === SEM_ANUNCIO ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione o anúncio" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SEM_ANUNCIO}>Sem anúncio</SelectItem>
+                  {anunciosLista.map((a) => (
+                    <SelectItem key={a.id} value={a.nome}>{a.nome}</SelectItem>
+                  ))}
+                  {form.anuncio && !anunciosLista.some((a) => a.nome === form.anuncio) && (
+                    <SelectItem value={form.anuncio}>{form.anuncio} (inativo)</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">

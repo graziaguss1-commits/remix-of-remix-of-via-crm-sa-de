@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { AnunciosSection } from "@/components/settings/AnunciosSection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrg } from "@/hooks/useOrg";
@@ -49,6 +50,7 @@ export default function Settings() {
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
           <TabsTrigger value="custom-fields">Campos</TabsTrigger>
+          <TabsTrigger value="anuncios">Anúncios</TabsTrigger>
           <TabsTrigger value="members">Membros</TabsTrigger>
           <TabsTrigger value="notifications">Notificações</TabsTrigger>
           <TabsTrigger value="appearance">Aparência</TabsTrigger>
@@ -67,6 +69,10 @@ export default function Settings() {
         <TabsContent value="custom-fields" className="mt-4">
           <CustomFieldsTab orgId={orgId} />
         </TabsContent>
+        <TabsContent value="anuncios" className="mt-4">
+          <AnunciosSection />
+        </TabsContent>
+
         <TabsContent value="members" className="mt-4">
           <MembersTab orgId={orgId} userId={user?.id} />
         </TabsContent>

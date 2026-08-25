@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrg } from "@/hooks/useOrg";
-import { useContactsLite } from "@/hooks/useLeads";
+import { useAnuncios, useContactsLite } from "@/hooks/useLeads";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,11 +37,14 @@ const EMPTY = {
   stageId: "",
 };
 
+const SEM_ANUNCIO = "sem-anuncio";
+
 export function LeadCreateModal({ open, onOpenChange, stages, pipelineId, onCreated }: Props) {
   const { orgId } = useOrg();
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: contacts = [] } = useContactsLite();
+  const { data: anuncios = [] } = useAnuncios();
   const [form, setForm] = useState({ ...EMPTY });
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -160,11 +163,25 @@ export function LeadCreateModal({ open, onOpenChange, stages, pipelineId, onCrea
 
           <div className="space-y-1.5">
             <Label>Anúncio / criativo</Label>
-            <Input
-              value={form.anuncio}
-              onChange={(e) => set({ anuncio: e.target.value })}
-              placeholder='Ex: "Tenho interesse no tratamento da menopausa"'
-            />
+            <Select
+              value={form.anuncio || SEM_ANUNCIO}
+              onValueChange={(v) => set({ anuncio: v === SEM_ANUNCIO ? "" : v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o anúncio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_ANUNCIO}>Sem anúncio</SelectItem>
+                {anuncios.map((a) => (
+                  <SelectItem key={a.id} value={a.nome}>{a.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {anuncios.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Nenhum anúncio cadastrado. Crie a lista em Configurações → Anúncios.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
