@@ -8,10 +8,19 @@ export const PERIODOS = [
   { value: "7", label: "Últimos 7 dias" },
   { value: "30", label: "Últimos 30 dias" },
   { value: "90", label: "Últimos 90 dias" },
+  { value: "mes", label: "Este mês" },
+  { value: "mes-anterior", label: "Mês passado" },
   { value: "todos", label: "Todo o período" },
+  { value: "custom", label: "Escolher datas…" },
 ] as const;
 
 export type PeriodoValue = (typeof PERIODOS)[number]["value"];
+
+/** Datas escolhidas a mão, no formato yyyy-mm-dd dos inputs. */
+export interface PeriodoCustom {
+  de: string;
+  ate: string;
+}
 
 export const STAGE_GANHO = "Ganho";
 
@@ -63,12 +72,42 @@ export function useNomesDeContatos() {
   });
 }
 
-export function inicioDoPeriodo(periodo: PeriodoValue): Date | null {
-  if (periodo === "todos") return null;
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - Number(periodo));
-  return d;
+/**
+ * Converte o periodo escolhido em um intervalo. `null` em qualquer ponta
+ * significa "sem limite daquele lado".
+ */
+export function intervaloDoPeriodo(
+  periodo: PeriodoValue,
+  custom?: PeriodoCustom,
+): { de: Date | null; ate: Date | null } {
+  const agora = new Date();
+
+  if (periodo === "todos") return { de: null, ate: null };
+
+  if (periodo === "mes") {
+    return { de: new Date(agora.getFullYear(), agora.getMonth(), 1), ate: null };
+  }
+
+  if (periodo === "mes-anterior") {
+    return {
+      de: new Date(agora.getFullYear(), agora.getMonth() - 1, 1),
+      ate: new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59, 999),
+    };
+  }
+
+  if (periodo === "custom") {
+    // Sem data preenchida, aquela ponta fica em aberto.
+    const de = custom?.de ? new Date(`${custom.de}T00:00:00`) : null;
+    const ate = custom?.ate ? new Date(`${custom.ate}T23:59:59.999`) : null;
+    // Datas invertidas: troca em vez de devolver lista vazia sem explicacao.
+    if (de && ate && de > ate) return { de: ate, ate: de };
+    return { de, ate };
+  }
+
+  const de = new Date(agora);
+  de.setHours(0, 0, 0, 0);
+  de.setDate(de.getDate() - Number(periodo));
+  return { de, ate: null };
 }
 
 export function taxa(parte: number, total: number): number {
@@ -85,11 +124,13 @@ export function ehConvertido(lead: Lead, stageById: Map<string, Stage>): boolean
 
 export function filtrarLeads(
   leads: Lead[],
-  opcoes: { periodo: PeriodoValue; canal?: string; anuncio?: string },
+  opcoes: { periodo: PeriodoValue; custom?: PeriodoCustom; canal?: string; anuncio?: string },
 ): Lead[] {
-  const desde = inicioDoPeriodo(opcoes.periodo);
+  const { de, ate } = intervaloDoPeriodo(opcoes.periodo, opcoes.custom);
   return leads.filter((l) => {
-    if (desde && new Date(l.created_at) < desde) return false;
+    const criado = new Date(l.created_at);
+    if (de && criado < de) return false;
+    if (ate && criado > ate) return false;
     if (opcoes.canal && opcoes.canal !== "todos" && l.contact?.canal !== opcoes.canal) return false;
     if (opcoes.anuncio && opcoes.anuncio !== "todos" && l.contact?.anuncio !== opcoes.anuncio) return false;
     return true;

@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { BarList, FiltroSelect, MetricCard } from "@/components/dashboards/DashboardBits";
+import { BarList, FiltroPeriodo, FiltroSelect, MetricCard } from "@/components/dashboards/DashboardBits";
 import { TEMPERATURA_LABELS } from "@/components/leads/constants";
 import {
-  PERIODOS,
   agruparPor,
   ehConvertido,
   filtrarLeads,
@@ -11,6 +10,7 @@ import {
   porTemperatura,
   taxa,
   useCrmMetrics,
+  type PeriodoCustom,
   type PeriodoValue,
 } from "@/hooks/useCrmMetrics";
 
@@ -18,6 +18,7 @@ const TODOS = "todos";
 
 export default function DashboardMarketing() {
   const [periodo, setPeriodo] = useState<PeriodoValue>("30");
+  const [custom, setCustom] = useState<PeriodoCustom>({ de: "", ate: "" });
   const [canal, setCanal] = useState(TODOS);
   const [anuncio, setAnuncio] = useState(TODOS);
   const { isLoading, error, leads, stageById } = useCrmMetrics();
@@ -33,7 +34,7 @@ export default function DashboardMarketing() {
   }, [leads]);
 
   const m = useMemo(() => {
-    const filtrados = filtrarLeads(leads, { periodo, canal, anuncio });
+    const filtrados = filtrarLeads(leads, { periodo, custom, canal, anuncio });
     const convertidos = filtrados.filter((l) => ehConvertido(l, stageById)).length;
     return {
       total: filtrados.length,
@@ -43,7 +44,7 @@ export default function DashboardMarketing() {
       porCanal: agruparPor(filtrados, stageById, (l) => l.contact?.canal),
       porAnuncio: agruparPor(filtrados, stageById, (l) => l.contact?.anuncio),
     };
-  }, [leads, stageById, periodo, canal, anuncio]);
+  }, [leads, stageById, periodo, custom, canal, anuncio]);
 
   if (isLoading) {
     return (
@@ -71,11 +72,11 @@ export default function DashboardMarketing() {
           </p>
         </div>
         <div className="flex flex-wrap gap-4">
-          <FiltroSelect
-            label="Período"
-            value={periodo}
-            onChange={(v) => setPeriodo(v as PeriodoValue)}
-            options={PERIODOS.map((p) => ({ value: p.value, label: p.label }))}
+          <FiltroPeriodo
+            periodo={periodo}
+            onPeriodoChange={setPeriodo}
+            custom={custom}
+            onCustomChange={setCustom}
           />
           <FiltroSelect label="Canal" value={canal} onChange={setCanal} options={opcoesCanal} />
           <FiltroSelect label="Anúncio" value={anuncio} onChange={setAnuncio} options={opcoesAnuncio} />

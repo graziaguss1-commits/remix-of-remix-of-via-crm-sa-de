@@ -6,7 +6,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatarTaxa, taxa, type Contagem } from "@/hooks/useCrmMetrics";
+import { Input } from "@/components/ui/input";
+import {
+  PERIODOS, formatarTaxa, taxa,
+  type Contagem, type PeriodoCustom, type PeriodoValue,
+} from "@/hooks/useCrmMetrics";
 import type { Temperatura } from "@/components/leads/constants";
 
 type Tone = "default" | "positivo" | Temperatura;
@@ -119,6 +123,58 @@ export function FiltroSelect({
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Filtro de período, com opção de escolher datas                      */
+/* ------------------------------------------------------------------ */
+
+export function FiltroPeriodo({
+  periodo,
+  onPeriodoChange,
+  custom,
+  onCustomChange,
+}: {
+  periodo: PeriodoValue;
+  onPeriodoChange: (v: PeriodoValue) => void;
+  custom: PeriodoCustom;
+  onCustomChange: (v: PeriodoCustom) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <FiltroSelect
+        label="Período"
+        value={periodo}
+        onChange={(v) => onPeriodoChange(v as PeriodoValue)}
+        options={PERIODOS.map((p) => ({ value: p.value, label: p.label }))}
+      />
+
+      {periodo === "custom" && (
+        <>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">De</label>
+            <Input
+              type="date"
+              value={custom.de}
+              max={custom.ate || undefined}
+              onChange={(e) => onCustomChange({ ...custom, de: e.target.value })}
+              className="w-[160px]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Até</label>
+            <Input
+              type="date"
+              value={custom.ate}
+              min={custom.de || undefined}
+              onChange={(e) => onCustomChange({ ...custom, ate: e.target.value })}
+              className="w-[160px]"
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

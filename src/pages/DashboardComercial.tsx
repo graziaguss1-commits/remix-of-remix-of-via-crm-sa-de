@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { BarList, FiltroSelect, MetricCard } from "@/components/dashboards/DashboardBits";
+import { BarList, FiltroPeriodo, MetricCard } from "@/components/dashboards/DashboardBits";
 import { TEMPERATURA_LABELS } from "@/components/leads/constants";
 import {
-  PERIODOS,
   ehConvertido,
   filtrarLeads,
   formatarTaxa,
@@ -12,15 +11,17 @@ import {
   rankingObjecoes,
   taxa,
   useCrmMetrics,
+  type PeriodoCustom,
   type PeriodoValue,
 } from "@/hooks/useCrmMetrics";
 
 export default function DashboardComercial() {
   const [periodo, setPeriodo] = useState<PeriodoValue>("30");
+  const [custom, setCustom] = useState<PeriodoCustom>({ de: "", ate: "" });
   const { isLoading, error, leads, stageById, objecoesPorDeal, nomesDeContatos } = useCrmMetrics();
 
   const m = useMemo(() => {
-    const filtrados = filtrarLeads(leads, { periodo });
+    const filtrados = filtrarLeads(leads, { periodo, custom });
     const convertidos = filtrados.filter((l) => ehConvertido(l, stageById)).length;
     return {
       novos: filtrados.length,
@@ -30,7 +31,7 @@ export default function DashboardComercial() {
       objecoes: rankingObjecoes(filtrados, objecoesPorDeal),
       indicadores: rankingIndicadores(filtrados, stageById, nomesDeContatos),
     };
-  }, [leads, stageById, objecoesPorDeal, nomesDeContatos, periodo]);
+  }, [leads, stageById, objecoesPorDeal, nomesDeContatos, periodo, custom]);
 
   if (isLoading) {
     return (
@@ -57,11 +58,11 @@ export default function DashboardComercial() {
             Conversão, temperatura da base, objeções e quem mais indica.
           </p>
         </div>
-        <FiltroSelect
-          label="Período"
-          value={periodo}
-          onChange={(v) => setPeriodo(v as PeriodoValue)}
-          options={PERIODOS.map((p) => ({ value: p.value, label: p.label }))}
+        <FiltroPeriodo
+          periodo={periodo}
+          onPeriodoChange={setPeriodo}
+          custom={custom}
+          onCustomChange={setCustom}
         />
       </header>
 
