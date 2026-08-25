@@ -13,9 +13,13 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Plus, Search, Check, XCircle, AlertTriangle, ListChecks, Lock,
-  ChevronLeft, ChevronRight, CalendarDays, CalendarRange, CalendarClock,
+  ChevronLeft, ChevronRight, CalendarDays, CalendarRange, CalendarClock, CalendarSearch,
 } from "lucide-react";
 import { addDays, addWeeks, endOfWeek, format, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,6 +70,7 @@ export default function Agenda() {
   const [salvandoRemarcacao, setSalvandoRemarcacao] = useState(false);
 
   const [horario, setHorario] = useState<HorarioAtendimento>(HORARIO_PADRAO);
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [modo, setModo] = useState<Modo>("semana");
   const [cursor, setCursor] = useState<Date>(new Date());
 
@@ -258,6 +263,29 @@ export default function Agenda() {
             <Button variant="outline" size="icon" onClick={() => navegar(1)} aria-label="Próximo">
               <ChevronRight className="h-4 w-4" />
             </Button>
+
+            <Popover open={calendarioAberto} onOpenChange={setCalendarioAberto}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="ml-1 gap-1.5">
+                  <CalendarSearch className="h-4 w-4" />
+                  <span className="capitalize">{format(cursor, "d MMM yyyy", { locale: ptBR })}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  locale={ptBR}
+                  selected={cursor}
+                  defaultMonth={cursor}
+                  onSelect={(d) => {
+                    if (!d) return;
+                    setCursor(d);
+                    setCalendarioAberto(false);
+                  }}
+                  weekStartsOn={1}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="relative min-w-[220px] flex-1">
