@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/hooks/useOrg";
@@ -11,7 +11,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip,
   PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid,
 } from "recharts";
-import { Calendar, CheckCircle2, AlertTriangle, DollarSign, ArrowRight } from "lucide-react";
+import { Calendar, CheckCircle2, AlertTriangle, DollarSign, ArrowRight, Check } from "lucide-react";
 import {
   APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_BADGE, AppointmentStatus, BRL, fullName,
 } from "@/components/health/types";
@@ -29,6 +29,13 @@ interface AppointmentLite {
 interface PaymentLite { id: string; amount: number; status: string; paid_at: string | null; created_at: string }
 interface ActivityPending { id: string; title: string; due_date: string | null; type: string | null }
 interface OverduePatient { id: string; first_name: string; last_name: string | null; last_appointment: string }
+interface RecuperacaoItem {
+  id: string;
+  title: string;
+  due_date: string;
+  appointment_status: "cancelled" | "no_show";
+  contact_id: string | null;
+}
 
 const STATUS_COLORS: Record<AppointmentStatus, string> = {
   scheduled: "#3b82f6",
@@ -48,6 +55,21 @@ export default function Dashboard() {
   const [pendingActivities, setPendingActivities] = useState<ActivityPending[]>([]);
   const [overduePatients, setOverduePatients] = useState<OverduePatient[]>([]);
   const [diasSemRetorno, setDiasSemRetorno] = useState(DIAS_SEM_RETORNO_PADRAO);
+  const [recuperacao, setRecuperacao] = useState<RecuperacaoItem[]>([]);
+  const fetchDataRef = useRef<(() => Promise<void>) | null>(null);
+
+  const marcarResolvido = async (id: string) => {
+    // Some da lista na hora; o refetch confirma.
+    setRecuperacao((atual) => atual.filter((r) => r.id !== id));
+    const { error } = await (supabase as any)
+      .from("activities")
+      .update({ resolvido_em: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao marcar", description: error.message, variant: "destructive" });
+      void fetchDataRef.current?.();
+    }
+  };
 
   const fetchData = useCallback(async () => {
     if (!orgId) return;
@@ -126,6 +148,17 @@ export default function Dashboard() {
       setPayments(pays);
       setPendingActivities(pending);
 
+      // Faltas e cancelamentos ainda nao tratados pela recepcao.
+      const { data: recData } = await (supabase as any)
+        .from("activities")
+        .select("id,title,due_date,appointment_status,contact_id")
+        .eq("org_id", orgId)
+        .in("appointment_status", ["cancelled", "no_show"])
+        .is("resolvido_em", null)
+        .order("due_date", { ascending: false })
+        .limit(20);
+      setRecuperacao((recData ?? []) as RecuperacaoItem[]);
+
       // Pacientes sem retorno: ultima consulta atendida alem do prazo configurado
       // em Configuracoes -> Geral, e sem retorno ja marcado.
       const lastAttendedByPatient = new Map<string, string>();
@@ -176,7 +209,7 @@ export default function Dashboard() {
     }
   }, [orgId, toast]);
 
-  useEffect(() => { void fetchData(); }, [fetchData]);
+  useEffect(() => { fetchDataRef.current = fetchData; void fetchData(); }, [fetchData]);
 
   const kpis = useMemo(() => {
     const todayCount = todayAppointments.length;
@@ -403,6 +436,33 @@ export default function Dashboard() {
                     <Link to={`/agenda?patient=${p.id}`}>
                       <ArrowRight className="h-4 w-4" />
                     </Link>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Faltas e cancelamentos a recuperar</h3>
+            <Link to="/agenda" className="text-xs text-primary hover:underline">Ver agenda</Link>
+          </div>
+          {recuperacao.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nada pendente.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recuperacao.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{r.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.appointment_status === "no_show" ? "Faltou" : "Cancelou"} ·{" "}
+                      {new Date(r.due_date).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => marcarResolvido(r.id)}>
+                    <Check className="mr-1 h-3.5 w-3.5" /> OK
                   </Button>
                 </li>
               ))}

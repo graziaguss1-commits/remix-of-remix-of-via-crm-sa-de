@@ -32,6 +32,7 @@ export interface GridBloqueio {
   inicio: string;
   fim: string;
   observacao: string | null;
+  grupo_id?: string | null;
   professional?: { name: string } | null;
 }
 

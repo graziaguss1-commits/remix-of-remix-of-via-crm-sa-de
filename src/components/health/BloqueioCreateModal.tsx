@@ -16,6 +16,16 @@ import {
 
 const MOTIVOS = ["Reunião", "Almoço", "Folga", "Congresso", "Bloqueio pessoal", "Outro"];
 
+const REPETICOES = [
+  { value: "0", label: "Não repetir" },
+  { value: "7", label: "Toda semana" },
+  { value: "14", label: "A cada 15 dias" },
+  { value: "28", label: "A cada 4 semanas" },
+] as const;
+
+/** Quantas ocorrencias gerar quando o bloqueio repete. */
+const OCORRENCIAS = 26;
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -43,6 +53,7 @@ export function BloqueioCreateModal({
   const [fim, setFim] = useState("");
   const [professionalId, setProfessionalId] = useState("todos");
   const [observacao, setObservacao] = useState("");
+  const [repeticao, setRepeticao] = useState("0");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -55,6 +66,7 @@ export function BloqueioCreateModal({
     setTituloLivre("");
     setObservacao("");
     setProfessionalId("todos");
+    setRepeticao("0");
   }, [open, quandoInicial]);
 
   const nomeFinal = titulo === "Outro" ? tituloLivre.trim() : titulo;
@@ -64,17 +76,33 @@ export function BloqueioCreateModal({
     if (!orgId || !podeSalvar) return;
     setSaving(true);
     try {
-      const { error } = await (supabase as any).from("agenda_bloqueios").insert({
-        org_id: orgId,
-        titulo: nomeFinal,
-        inicio: new Date(inicio).toISOString(),
-        fim: new Date(fim).toISOString(),
-        observacao: observacao.trim() || null,
-        professional_id: professionalId === "todos" ? null : professionalId,
-        created_by: user?.id ?? null,
+      const intervalo = Number(repeticao);
+      const total = intervalo > 0 ? OCORRENCIAS : 1;
+      const grupoId = intervalo > 0 ? crypto.randomUUID() : null;
+      const baseInicio = new Date(inicio);
+      const baseFim = new Date(fim);
+
+      const linhas = Array.from({ length: total }, (_, i) => {
+        const ini = new Date(baseInicio); ini.setDate(ini.getDate() + i * intervalo);
+        const f = new Date(baseFim); f.setDate(f.getDate() + i * intervalo);
+        return {
+          org_id: orgId,
+          titulo: nomeFinal,
+          inicio: ini.toISOString(),
+          fim: f.toISOString(),
+          observacao: observacao.trim() || null,
+          professional_id: professionalId === "todos" ? null : professionalId,
+          created_by: user?.id ?? null,
+          grupo_id: grupoId,
+        };
       });
+
+      const { error } = await (supabase as any).from("agenda_bloqueios").insert(linhas);
       if (error) throw error;
-      toast({ title: "Horário bloqueado", description: nomeFinal });
+      toast({
+        title: "Horário bloqueado",
+        description: total > 1 ? `${nomeFinal} · ${total} ocorrências criadas` : nomeFinal,
+      });
       onOpenChange(false);
       onCreated?.();
     } catch (err: any) {
@@ -127,6 +155,22 @@ export function BloqueioCreateModal({
                 {professionals.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Repetir</Label>
+            <Select value={repeticao} onValueChange={setRepeticao}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {REPETICOES.map((r) => (<SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
+            {repeticao !== "0" && (
+              <p className="text-xs text-muted-foreground">
+                Serão criadas {OCORRENCIAS} ocorrências. Ao remover, você escolhe entre apagar
+                só aquela data ou toda a série.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">

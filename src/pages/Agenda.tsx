@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   Plus, Search, Check, XCircle, AlertTriangle, ListChecks, Lock,
-  ChevronLeft, ChevronRight, CalendarDays, CalendarRange,
+  ChevronLeft, ChevronRight, CalendarDays, CalendarRange, CalendarClock,
 } from "lucide-react";
 import { addDays, addWeeks, endOfWeek, format, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,6 +36,12 @@ interface AppointmentRow extends GridAppointment {
 
 type Modo = "semana" | "dia";
 
+/** Data no formato aceito por input datetime-local, no fuso local. */
+function toInputLocal(d: Date) {
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+}
+
 export default function Agenda() {
   const { orgId } = useOrg();
   const { toast } = useToast();
@@ -55,6 +61,9 @@ export default function Agenda() {
   const [bloqueioQuando, setBloqueioQuando] = useState<Date | null>(null);
   const [drawerPatientId, setDrawerPatientId] = useState<string | null>(null);
   const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [remarcando, setRemarcando] = useState(false);
+  const [novaData, setNovaData] = useState("");
+  const [salvandoRemarcacao, setSalvandoRemarcacao] = useState(false);
 
   const [modo, setModo] = useState<Modo>("semana");
   const [cursor, setCursor] = useState<Date>(new Date());
@@ -119,7 +128,7 @@ export default function Agenda() {
 
       let qb = (supabase as any)
         .from("agenda_bloqueios")
-        .select("id,titulo,inicio,fim,observacao,professional_id")
+        .select("id,titulo,inicio,fim,observacao,professional_id,grupo_id")
         .eq("org_id", orgId)
         .gte("inicio", intervalo.ini.toISOString())
         .lte("inicio", intervalo.fim.toISOString())
@@ -166,11 +175,34 @@ export default function Agenda() {
     }
   };
 
-  const removerBloqueio = async (id: string) => {
+  const remarcar = async (id: string) => {
+    if (!novaData) return;
+    setSalvandoRemarcacao(true);
     try {
-      const { error } = await (supabase as any).from("agenda_bloqueios").delete().eq("id", id);
+      const { error } = await (supabase as any)
+        .from("activities")
+        .update({ due_date: new Date(novaData).toISOString(), appointment_status: "scheduled" })
+        .eq("id", id);
       if (error) throw error;
-      toast({ title: "Bloqueio removido" });
+      toast({ title: "Consulta remarcada" });
+      setRemarcando(false);
+      setDetalheId(null);
+      void fetchAgenda();
+    } catch (err: any) {
+      toast({ title: "Erro ao remarcar", description: err?.message ?? String(err), variant: "destructive" });
+    } finally {
+      setSalvandoRemarcacao(false);
+    }
+  };
+
+  const removerBloqueio = async (id: string, serieInteira: boolean, grupoId?: string | null) => {
+    try {
+      const alvo = (supabase as any).from("agenda_bloqueios").delete();
+      const { error } = serieInteira && grupoId
+        ? await alvo.eq("grupo_id", grupoId)
+        : await alvo.eq("id", id);
+      if (error) throw error;
+      toast({ title: serieInteira ? "Série removida" : "Bloqueio removido" });
       void fetchAgenda();
     } catch (err: any) {
       toast({ title: "Erro ao remover", description: err?.message ?? String(err), variant: "destructive" });
@@ -271,13 +303,23 @@ export default function Agenda() {
           onSelecionarConsulta={setDetalheId}
           onSelecionarBloqueio={(id) => {
             const b = bloqueios.find((x) => x.id === id);
-            if (b && window.confirm(`Remover o bloqueio "${b.titulo}"?`)) void removerBloqueio(id);
+            if (!b) return;
+            if (b.grupo_id) {
+              // Bloqueio que se repete: separa apagar esta data de apagar a serie.
+              if (!window.confirm(`Remover o bloqueio "${b.titulo}" desta data?`)) return;
+              const serie = window.confirm(
+                "Remover também todas as outras datas dessa repetição?\n\nOK = apaga a série inteira. Cancelar = apaga só esta data.",
+              );
+              void removerBloqueio(id, serie, b.grupo_id);
+              return;
+            }
+            if (window.confirm(`Remover o bloqueio "${b.titulo}"?`)) void removerBloqueio(id, false);
           }}
           onSelecionarVazio={(quando) => { setBloqueioQuando(quando); setBloqueioOpen(true); }}
         />
       )}
 
-      <Sheet open={detalhe !== null} onOpenChange={(o) => { if (!o) setDetalheId(null); }}>
+      <Sheet open={detalhe !== null} onOpenChange={(o) => { if (!o) { setDetalheId(null); setRemarcando(false); } }}>
         <SheetContent className="w-full sm:max-w-md">
           {detalhe && (
             <>
@@ -311,6 +353,38 @@ export default function Agenda() {
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Observações</p>
                     <p className="whitespace-pre-wrap">{detalhe.body}</p>
                   </div>
+                )}
+
+                {remarcando ? (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <p className="text-xs font-medium">Novo horário</p>
+                    <Input
+                      type="datetime-local"
+                      value={novaData}
+                      onChange={(e) => setNovaData(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => remarcar(detalhe.id)} disabled={!novaData || salvandoRemarcacao}>
+                        {salvandoRemarcacao ? "Salvando…" : "Confirmar novo horário"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setRemarcando(false)}>Cancelar</Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      A consulta volta para "Agendada" no novo horário.
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setNovaData(detalhe.due_date ? toInputLocal(new Date(detalhe.due_date)) : "");
+                      setRemarcando(true);
+                    }}
+                  >
+                    <CalendarClock className="mr-1 h-3.5 w-3.5" /> Remarcar
+                  </Button>
                 )}
 
                 <div className="flex flex-wrap gap-2 pt-2">
