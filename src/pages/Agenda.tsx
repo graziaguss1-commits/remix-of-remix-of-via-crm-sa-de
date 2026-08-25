@@ -23,6 +23,7 @@ import { AppointmentCreateModal } from "@/components/health/AppointmentCreateMod
 import { BloqueioCreateModal } from "@/components/health/BloqueioCreateModal";
 import { PatientDrawer } from "@/components/health/PatientDrawer";
 import { AgendaGrid, GridAppointment, GridBloqueio } from "@/components/health/AgendaGrid";
+import { HORARIO_PADRAO, getHorarioAtendimento, type HorarioAtendimento } from "@/lib/orgSettings";
 import {
   APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS,
   AppointmentStatus, AppointmentType, fullName,
@@ -65,6 +66,7 @@ export default function Agenda() {
   const [novaData, setNovaData] = useState("");
   const [salvandoRemarcacao, setSalvandoRemarcacao] = useState(false);
 
+  const [horario, setHorario] = useState<HorarioAtendimento>(HORARIO_PADRAO);
   const [modo, setModo] = useState<Modo>("semana");
   const [cursor, setCursor] = useState<Date>(new Date());
 
@@ -144,6 +146,13 @@ export default function Agenda() {
       setLoading(false);
     }
   }, [orgId, statusFilter, typeFilter, professionalFilter, intervalo, toast]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    let ativo = true;
+    void getHorarioAtendimento(orgId).then((h) => { if (ativo) setHorario(h); });
+    return () => { ativo = false; };
+  }, [orgId]);
 
   useEffect(() => { void fetchProfessionals(); }, [fetchProfessionals]);
   useEffect(() => { void fetchAgenda(); }, [fetchAgenda]);
@@ -316,6 +325,7 @@ export default function Agenda() {
             if (window.confirm(`Remover o bloqueio "${b.titulo}"?`)) void removerBloqueio(id, false);
           }}
           onSelecionarVazio={(quando) => { setBloqueioQuando(quando); setBloqueioOpen(true); }}
+          horario={horario}
         />
       )}
 

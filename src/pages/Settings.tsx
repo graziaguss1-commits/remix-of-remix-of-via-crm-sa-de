@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { HorarioAtendimentoSection } from "@/components/settings/HorarioAtendimentoSection";
 import { DIAS_SEM_RETORNO_PADRAO } from "@/lib/orgSettings";
 import { AnunciosSection } from "@/components/settings/AnunciosSection";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,7 @@ export default function Settings() {
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
           <TabsTrigger value="custom-fields">Campos</TabsTrigger>
+          <TabsTrigger value="horarios">Horários</TabsTrigger>
           <TabsTrigger value="anuncios">Anúncios</TabsTrigger>
           <TabsTrigger value="members">Membros</TabsTrigger>
           <TabsTrigger value="notifications">Notificações</TabsTrigger>
@@ -69,6 +71,10 @@ export default function Settings() {
         <TabsContent value="custom-fields" className="mt-4">
           <CustomFieldsTab orgId={orgId} />
         </TabsContent>
+        <TabsContent value="horarios" className="mt-4">
+          <HorarioAtendimentoSection />
+        </TabsContent>
+
         <TabsContent value="anuncios" className="mt-4">
           <AnunciosSection />
         </TabsContent>

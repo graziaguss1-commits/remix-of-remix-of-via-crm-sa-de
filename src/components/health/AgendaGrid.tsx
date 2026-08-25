@@ -3,6 +3,7 @@ import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { faixaDaGrade, type HorarioAtendimento } from "@/lib/orgSettings";
 import {
   APPOINTMENT_STATUS_BADGE,
   APPOINTMENT_STATUS_LABELS,
@@ -10,9 +11,6 @@ import {
   fullName,
 } from "@/components/health/types";
 
-/** Faixa de horas exibida na grade. */
-export const HORA_INICIO = 7;
-export const HORA_FIM = 21;
 const ALTURA_HORA = 64; // px por hora
 
 export interface GridAppointment {
@@ -45,17 +43,25 @@ interface AgendaGridProps {
   onSelecionarBloqueio: (id: string) => void;
   /** Clique num espaco vazio: recebe o horario exato daquela faixa. */
   onSelecionarVazio?: (quando: Date) => void;
+  /** Horario de atendimento da clinica, de Configuracoes -> Horários. */
+  horario: HorarioAtendimento;
 }
 
-const HORAS = Array.from({ length: HORA_FIM - HORA_INICIO }, (_, i) => HORA_INICIO + i);
+
 
 function minutosDoDia(d: Date) {
   return d.getHours() * 60 + d.getMinutes();
 }
 
+/** Hora esta dentro do expediente daquele dia da semana? */
+function dentroDoExpediente(horario: HorarioAtendimento, dia: Date, hora: number) {
+  const d = horario[dia.getDay()];
+  return d.aberto && hora >= d.inicio && hora < d.fim;
+}
+
 /** Posicao vertical (em px) de um horario dentro da grade. */
-function topo(d: Date) {
-  return ((minutosDoDia(d) - HORA_INICIO * 60) / 60) * ALTURA_HORA;
+function topo(d: Date, horaInicio: number) {
+  return ((minutosDoDia(d) - horaInicio * 60) / 60) * ALTURA_HORA;
 }
 
 function altura(minutos: number) {
@@ -70,7 +76,13 @@ export function AgendaGrid({
   onSelecionarConsulta,
   onSelecionarBloqueio,
   onSelecionarVazio,
+  horario,
 }: AgendaGridProps) {
+  const faixa = useMemo(() => faixaDaGrade(horario), [horario]);
+  const HORAS = useMemo(
+    () => Array.from({ length: Math.max(1, faixa.fim - faixa.inicio) }, (_, i) => faixa.inicio + i),
+    [faixa],
+  );
   const dias = useMemo(() => {
     if (modo === "dia") return [cursor];
     const inicio = startOfWeek(cursor, { weekStartsOn: 1 });
@@ -95,6 +107,9 @@ export function AgendaGrid({
               <p className="text-xs capitalize text-muted-foreground">
                 {format(d, modo === "dia" ? "EEEE" : "EEE", { locale: ptBR })}
               </p>
+              {!horario[d.getDay()].aberto && (
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Fechado</p>
+              )}
               <p
                 className={cn(
                   "mt-0.5 text-lg font-semibold tabular-nums",
@@ -128,7 +143,10 @@ export function AgendaGrid({
               {HORAS.map((h) => (
                 <div
                   key={h}
-                  className="border-b transition-colors hover:bg-muted/40"
+                  className={cn(
+                    "border-b transition-colors hover:bg-muted/40",
+                    !dentroDoExpediente(horario, dia, h) && "bg-muted/50",
+                  )}
                   style={{ height: ALTURA_HORA }}
                   onClick={() => {
                     if (!onSelecionarVazio) return;
@@ -148,7 +166,7 @@ export function AgendaGrid({
                     key={b.id}
                     onClick={() => onSelecionarBloqueio(b.id)}
                     className="absolute left-1 right-1 z-10 overflow-hidden rounded-md border border-dashed border-muted-foreground/40 bg-muted/70 px-2 py-1 text-left"
-                    style={{ top: topo(ini), height: altura(mins) }}
+                    style={{ top: topo(ini, faixa.inicio), height: altura(mins) }}
                   >
                     <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                       <Lock className="h-3 w-3 shrink-0" />
@@ -172,7 +190,7 @@ export function AgendaGrid({
                       "absolute left-1 right-1 z-10 overflow-hidden rounded-md border bg-card px-2 py-1 text-left shadow-sm transition-shadow hover:shadow-md",
                       cancelada && "opacity-60",
                     )}
-                    style={{ top: topo(ini), height: altura(mins) }}
+                    style={{ top: topo(ini, faixa.inicio), height: altura(mins) }}
                   >
                     <span className="flex items-center justify-between gap-1">
                       <span className="text-xs font-semibold tabular-nums">{format(ini, "HH:mm")}</span>
