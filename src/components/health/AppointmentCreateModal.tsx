@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -42,7 +41,6 @@ export function AppointmentCreateModal({ open, onOpenChange, defaultPatientId, o
   const [date, setDate] = useState<string>("");
   const [time, setTime] = useState<string>("");
   const [notes, setNotes] = useState("");
-  const [sendReminder, setSendReminder] = useState(true);
 
   useEffect(() => { if (defaultPatientId) setPatientId(defaultPatientId); }, [defaultPatientId]);
 
@@ -75,7 +73,7 @@ export function AppointmentCreateModal({ open, onOpenChange, defaultPatientId, o
 
   const reset = () => {
     setPatientId(defaultPatientId ?? ""); setPatientSearch(""); setType("consulta");
-    setDuration(30); setDate(""); setTime(""); setNotes(""); setSendReminder(true);
+    setDuration(30); setDate(""); setTime(""); setNotes("");
   };
 
   const handleSave = async () => {
@@ -111,9 +109,6 @@ export function AppointmentCreateModal({ open, onOpenChange, defaultPatientId, o
         .single();
       if (error) throw error;
       toast({ title: "Consulta agendada", description: patient ? fullName(patient) : "" });
-      if (sendReminder) {
-        // Best-effort: leaves flag for downstream automation/cron to pick up
-      }
       reset();
       onOpenChange(false);
       if (data?.id && onCreated) onCreated(data.id);
@@ -194,10 +189,6 @@ export function AppointmentCreateModal({ open, onOpenChange, defaultPatientId, o
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={sendReminder} onCheckedChange={(v) => setSendReminder(v === true)} />
-            Enviar lembrete por WhatsApp
-          </label>
         </div>
 
         <DialogFooter>
