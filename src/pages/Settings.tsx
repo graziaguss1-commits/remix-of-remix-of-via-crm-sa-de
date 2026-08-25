@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { ACCENT_LABELS } from "@/contexts/ThemeContext";
 import { HorarioAtendimentoSection } from "@/components/settings/HorarioAtendimentoSection";
 import { DIAS_SEM_RETORNO_PADRAO } from "@/lib/orgSettings";
 import { AnunciosSection } from "@/components/settings/AnunciosSection";
@@ -921,13 +922,7 @@ function AppearanceTab() {
     { value: "system" as const, label: "Sistema", icon: Monitor },
   ];
 
-  const accents = [
-    { value: "blue", label: "Azul", color: "hsl(221, 83%, 53%)" },
-    { value: "violet", label: "Violeta", color: "hsl(262, 83%, 58%)" },
-    { value: "emerald", label: "Esmeralda", color: "hsl(160, 84%, 39%)" },
-    { value: "orange", label: "Laranja", color: "hsl(25, 95%, 53%)" },
-    { value: "rose", label: "Rosa", color: "hsl(347, 77%, 50%)" },
-  ];
+  const accents = ACCENT_LABELS;
 
   const densities = [
     { value: "compact" as const, label: "Compacta", desc: "Menos espaçamento, mais dados visíveis" },
@@ -961,7 +956,7 @@ function AppearanceTab() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Cor de Destaque</CardTitle>
-          <CardDescription className="text-[10px]">Cor primária da interface</CardDescription>
+          <CardDescription className="text-[10px]">Cores da identidade visual da clínica</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">

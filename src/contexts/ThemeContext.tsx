@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
+const ACCENT_PADRAO = "mogno";
+
 type Theme = "light" | "dark" | "system";
 type Density = "compact" | "normal" | "comfortable";
 
@@ -17,24 +19,45 @@ const ThemeContext = createContext<ThemeContextType>({
   setTheme: () => {},
   density: "normal",
   setDensity: () => {},
-  accentColor: "blue",
+  accentColor: ACCENT_PADRAO,
   setAccentColor: () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
 
-const ACCENT_COLORS: Record<string, { light: string; dark: string; ring: string }> = {
-  blue: { light: "221 83% 53%", dark: "217 91% 60%", ring: "221 83% 53%" },
-  violet: { light: "262 83% 58%", dark: "263 70% 50%", ring: "262 83% 58%" },
-  emerald: { light: "160 84% 39%", dark: "160 84% 39%", ring: "160 84% 39%" },
-  orange: { light: "25 95% 53%", dark: "25 95% 53%", ring: "25 95% 53%" },
-  rose: { light: "347 77% 50%", dark: "347 77% 50%", ring: "347 77% 50%" },
+/**
+ * Cores da identidade visual da clinica.
+ * No tema escuro o mogno e o marinho ficam quase invisiveis contra o fundo
+ * quase-preto, entao cada uma tem uma versao clareada.
+ */
+export const ACCENT_COLORS: Record<string, { light: string; dark: string; ring: string }> = {
+  // Marrom mogno #5C3D2E - cor principal da marca
+  mogno: { light: "20 33% 27%", dark: "20 30% 45%", ring: "29 57% 46%" },
+  // Cobre queimado #B87333 - destaque premium
+  cobre: { light: "29 57% 46%", dark: "29 57% 52%", ring: "29 57% 46%" },
+  // Azul marinho #1B2C4E - contexto clinico
+  marinho: { light: "220 49% 21%", dark: "220 45% 45%", ring: "220 49% 30%" },
+  // Marrom escuro #3A2218 - ancora do gradiente
+  cacau: { light: "18 41% 16%", dark: "18 30% 38%", ring: "29 57% 46%" },
 };
+
+export const ACCENT_LABELS: { value: string; label: string; color: string }[] = [
+  { value: "mogno", label: "Mogno", color: "#5C3D2E" },
+  { value: "cobre", label: "Cobre", color: "#B87333" },
+  { value: "marinho", label: "Marinho", color: "#1B2C4E" },
+  { value: "cacau", label: "Cacau", color: "#3A2218" },
+];
+
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => (localStorage.getItem("fc-theme") as Theme) || "light");
   const [density, setDensityState] = useState<Density>(() => (localStorage.getItem("fc-density") as Density) || "normal");
-  const [accentColor, setAccentState] = useState(() => localStorage.getItem("fc-accent") || "blue");
+  const [accentColor, setAccentState] = useState(() => {
+    // Quem usou o sistema antes da mudanca tem uma cor antiga salva no
+    // navegador; sem isto, ela sobrescreveria a identidade a cada carregamento.
+    const salvo = localStorage.getItem("fc-accent");
+    return salvo && salvo in ACCENT_COLORS ? salvo : ACCENT_PADRAO;
+  });
 
   const applyTheme = (t: Theme) => {
     const root = document.documentElement;
@@ -50,7 +73,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const applyAccent = (color: string) => {
     const root = document.documentElement;
     const isDark = root.classList.contains("dark");
-    const palette = ACCENT_COLORS[color] || ACCENT_COLORS.blue;
+    const palette = ACCENT_COLORS[color] || ACCENT_COLORS[ACCENT_PADRAO];
     const val = isDark ? palette.dark : palette.light;
     root.style.setProperty("--primary", val);
     root.style.setProperty("--ring", palette.ring);
