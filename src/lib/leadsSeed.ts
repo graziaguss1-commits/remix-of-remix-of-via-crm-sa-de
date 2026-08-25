@@ -28,14 +28,21 @@ export async function seedLeadsConfig(orgId: string): Promise<string | null> {
   if (!orgId) return null;
 
   // 1. Pipeline
+  // Resolve pelo is_default primeiro: assim renomear o pipeline na tela de
+  // Configuracoes nao faz o CRM criar um segundo pipeline vazio. O nome so e
+  // usado como fallback, para orgs criadas antes desta mudanca.
   const { data: pipelines } = await supabase
     .from("pipelines")
-    .select("id, name")
+    .select("id, name, is_default")
     .eq("org_id", orgId)
-    .eq("name", DEFAULT_PIPELINE_NAME)
-    .limit(1);
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: true });
 
-  let pipelineId = pipelines?.[0]?.id ?? null;
+  const lista = pipelines ?? [];
+  let pipelineId =
+    lista.find((p) => p.is_default)?.id ??
+    lista.find((p) => p.name === DEFAULT_PIPELINE_NAME)?.id ??
+    null;
 
   if (!pipelineId) {
     const { data: created, error } = await supabase
